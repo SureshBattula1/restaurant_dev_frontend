@@ -133,7 +133,7 @@
 /* Content Section */
 .content-section {
   flex: 1;
-  padding: 2rem;
+  padding: 2rem 0;
   overflow-y: auto;
 }
 

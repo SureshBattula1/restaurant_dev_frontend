@@ -13,15 +13,15 @@
   padding: 3rem;
 }
 
-/* Page Header */
+/* Page Header - match inventory/inventory-dashboard */
 .page-header {
   background: var(--color-bg-white);
-  padding: var(--spacing-lg) var(--spacing-xl);
+  padding: var(--spacing-md) var(--spacing-xl); /* smaller header height */
   display: flex;
   align-items: center;
   justify-content: space-between;
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm); /* reduced bottom margin */
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
 }
@@ -29,8 +29,8 @@
 .page-title {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xl);        /* slightly smaller title */
+  font-weight: var(--font-weight-semibold);
 }
 
 .location-badge {
@@ -134,17 +134,17 @@
 
 .content-section {
   flex: 1;
-  padding: 2rem;
+  padding: 2rem 0;
   overflow-y: auto;
 }
 
 .report-form-card {
-  background: var(--color-bg-white);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border-light);
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
 }
 
 .section-title {
@@ -160,9 +160,17 @@
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto; /* Date From, Date To, Location equal width */
   gap: 1rem;
   align-items: end;
+}
+
+/* Mobile: stack Date From, Date To, Location as full-width rows */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
 }
 
 .form-group {
@@ -376,4 +384,39 @@
 
 .content-section::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Make charts more compact and responsive on mobile */
+@media (max-width: 768px) {
+  .chart-container {
+    padding: 0.75rem;
+    height: 260px;
+  }
+
+  .chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Make report tables horizontally scrollable on mobile */
+  .data-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 600px;
+  }
+}
+
+/* Profit & Loss chart: slightly smaller and responsive */
+#profitLossChart {
+  width: 100% !important;
+  max-height: 320px;
+}
+
+@media (max-width: 768px) {
+  #profitLossChart {
+    max-height: 220px;
+  }
 }

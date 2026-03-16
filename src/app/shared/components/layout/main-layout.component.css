@@ -157,12 +157,13 @@
     padding:0;
     }
     
-    :host ::ng-deep .sidebar-nav .mat-mdc-list-item{
-    margin:4px 12px;
-    border-radius:8px;
+:host ::ng-deep .sidebar-nav .mat-mdc-list-item{
+    margin:2px 10px;                /* slightly tighter vertical/horizontal spacing */
+    border-radius:6px;
     padding:0 !important;
     transition:background 0.2s ease;
     position:relative;
+    min-height: 36px;               /* shorter row height */
     }
     
     :host ::ng-deep .sidebar-nav .mat-mdc-list-item:hover{
@@ -194,9 +195,10 @@
     
     /* NAV TEXT */
     
-    :host ::ng-deep .sidebar-nav .mat-mdc-list-item .mdc-list-item__primary-text{
+:host ::ng-deep .sidebar-nav .mat-mdc-list-item .mdc-list-item__primary-text{
     color:var(--text-muted);
     font-weight:500;
+    font-size: 13px;                /* smaller label text */
     }
     
     :host ::ng-deep .sidebar-nav .mat-mdc-list-item:hover .mdc-list-item__primary-text,

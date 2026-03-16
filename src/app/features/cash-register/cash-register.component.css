@@ -3,7 +3,7 @@
   background: #f5f7fa;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: 1rem 0;
 }
 
 .page-header {
@@ -214,6 +214,16 @@
   max-width: 420px;
 }
 
+/* Add comfortable padding for simple forms (Open/Close Register) */
+.modal-content > form {
+  padding: 1.5rem;
+}
+
+/* Keep transaction modal using its own layout rules */
+.modal-content > form.transaction-form {
+  padding: 0;
+}
+
 .modal-header {
   padding: 1.5rem;
   border-bottom: 1px solid #e5e7eb;
@@ -324,6 +334,8 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: #1f2937;
+  display: inline-block;
+  margin-top: 0.25rem;
 }
 
 .modal-footer {

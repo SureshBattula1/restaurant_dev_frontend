@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -32,6 +33,8 @@ export class LoginComponent {
   loginForm: FormGroup;
   loading = false;
   error = '';
+  logoImageUrl: string;
+  hidePassword = true;
 
   constructor(
     private fb: FormBuilder,
@@ -42,6 +45,9 @@ export class LoginComponent {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+
+    const baseUrl = environment.apiUrl.replace('/api', '');
+    this.logoImageUrl = `${baseUrl}/images/bigbridgz.jpg`;
   }
 
   onSubmit(): void {

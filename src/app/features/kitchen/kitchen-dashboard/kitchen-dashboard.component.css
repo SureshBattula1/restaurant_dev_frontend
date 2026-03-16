@@ -1,37 +1,37 @@
 .kitchen-container {
   min-height: calc(100vh - 2rem);
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  background: var(--color-bg-primary);
   display: flex;
   flex-direction: column;
-  padding: 1rem;
 }
 
-/* Page Header */
+/* Page Header - align with other dashboards */
 .page-header {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 1.5rem 2rem;
+  background: var(--color-bg-white);
+  padding: var(--spacing-md) var(--spacing-xl);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
 }
 
 .page-title {
   margin: 0;
-  color: white;
-  font-size: 1.5rem;
-  font-weight: bold;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
 }
 
 .location-badge {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .header-right {
@@ -47,7 +47,7 @@
 
 .user-name {
   font-weight: 500;
-  color: white;
+  color: #374151;
 }
 
 .logout-btn {
@@ -70,19 +70,22 @@
 
 /* Filters */
 .filters-container {
-  padding: 1rem 2rem;
+  padding: 1rem var(--spacing-xl);
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .filter-btn {
   padding: 0.5rem 1.25rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-light);
   border-radius: 9999px;
   cursor: pointer;
   font-weight: 500;
@@ -93,18 +96,18 @@
 }
 
 .filter-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-bg-hover);
 }
 
 .filter-btn.active {
-  background: white;
-  color: #1e3a8a;
-  border-color: white;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border-color: var(--color-primary);
 }
 
 .badge {
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
+  background: var(--color-error-light);
+  color: var(--color-error-text);
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
   font-size: 0.75rem;
@@ -114,7 +117,7 @@
 /* Orders Grid */
 .orders-grid {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.5rem var(--spacing-xl);
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
