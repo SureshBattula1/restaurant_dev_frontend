@@ -43,6 +43,65 @@
     </app-data-table>
   </div>
 
+  <!-- Raw Material Item Modal -->
+  <div class="modal-overlay" *ngIf="showItemModal" (click)="closeItemModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedItem ? 'Edit Raw Material' : 'Add Raw Material' }}</h3>
+        <button (click)="closeItemModal()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="itemForm" (ngSubmit)="saveItem()" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" formControlName="name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">SKU *</label>
+            <input type="text" formControlName="sku" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Barcode</label>
+            <input type="text" formControlName="barcode" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select formControlName="category_id" class="form-select">
+              <option [ngValue]="null">Select Category</option>
+              <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unit *</label>
+            <input type="text" formControlName="unit" class="form-input" placeholder="e.g., kg, ltr, pcs" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cost Price *</label>
+            <input type="number" formControlName="cost_price" class="form-input" step="0.01" min="0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Low Stock Threshold</label>
+            <input type="number" formControlName="low_stock_threshold" class="form-input" min="0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <input type="checkbox" formControlName="expiry_tracking" />
+              Track Expiry
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea formControlName="description" class="form-textarea" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="closeItemModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="itemForm.invalid" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Menu Items Tab -->
   <div class="content-section" *ngIf="activeTab === 'menu-items'">
     <div class="section-header">
@@ -218,10 +277,10 @@
   <div class="content-section" *ngIf="activeTab === 'stock'">
     <div class="section-header">
       <h2 class="section-title">Stock Management</h2>
-      <div class="action-buttons">
+      <div class="action-buttons stock-action-buttons">
         <button (click)="openStockInModal()" class="btn-primary">+ Stock In</button>
-        <button (click)="openStockOutModal()" class="btn-secondary">- Stock Out</button>
-        <button (click)="openStockTransferModal()" class="btn-secondary">↔ Transfer</button>
+        <button (click)="openStockOutModal()" class="btn-danger">- Stock Out</button>
+        <button (click)="openStockTransferModal()" class="btn-success">↔ Transfer</button>
         <button (click)="openStockAdjustModal()" class="btn-secondary">⚙ Adjust</button>
       </div>
     </div>
