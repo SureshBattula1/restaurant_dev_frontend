@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -38,6 +38,7 @@ export class MainLayoutComponent implements OnInit {
   sidebarOpen = true;
   menuItems: MenuItem[] = [];
   logoImageUrl: string;
+  isMobile = false;
 
   constructor(
     private authService: AuthService,
@@ -50,6 +51,7 @@ export class MainLayoutComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.updateIsMobile();
     this.currentUser = this.authService.getCurrentUser();
     this.updateMenuItems();
     
@@ -73,6 +75,15 @@ export class MainLayoutComponent implements OnInit {
     }
   }
 
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateIsMobile();
+  }
+
+  private updateIsMobile(): void {
+    this.isMobile = window.innerWidth <= 768;
+  }
+
   private updateMenuItems(): void {
     // Get filtered menu items based on permissions
     this.menuItems = this.permissionService.getMenuItems();
@@ -80,6 +91,12 @@ export class MainLayoutComponent implements OnInit {
 
   toggleSidebar(): void {
     this.sidebarOpen = !this.sidebarOpen;
+  }
+
+  onNavItemClick(sidenav: any): void {
+    if (this.isMobile && sidenav) {
+      sidenav.close();
+    }
   }
 
   logout(): void {

@@ -1,6 +1,6 @@
 <div class="pos-container">
   <!-- Main Content -->
-  <div class="pos-content">
+  <div class="pos-content" [ngClass]="{ 'full-width': cartItems.length === 0 }">
     <!-- Products Section -->
     <div class="products-section">
       <!-- Products Section Header -->
@@ -147,10 +147,9 @@
               </div>
               <div class="product-badge" *ngIf="item.tax_rate && isItemActiveInLocation(item)">Tax: {{ item.tax_rate }}%</div>
               <div class="variant-badge" *ngIf="item.variants && item.variants.length > 0 && isItemActiveInLocation(item)">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Has variants">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
-                Variants
               </div>
             </div>
             <p class="product-sku">{{ item.sku }}</p>
@@ -209,12 +208,22 @@
     </div>
 
     <!-- Cart Section -->
-    <div class="cart-section">
+    <div 
+      class="cart-section" 
+      *ngIf="cartItems.length > 0 && (!isMobile || (isMobile && showMobileCart))">
       <!-- Cart Header -->
       <div class="cart-header-compact">
         <div class="cart-header-content">
           <h2 class="cart-title-compact">Cart</h2>
           <span class="cart-items-badge-compact" *ngIf="cartItems.length > 0">{{ cartItems.length }}</span>
+          <!-- Mobile close cart button -->
+          <button 
+            *ngIf="isMobile" 
+            (click)="showMobileCart = false" 
+            class="clear-cart-btn-compact" 
+            title="Close cart">
+            ×
+          </button>
           <button (click)="clearCart()" class="clear-cart-btn-compact" *ngIf="cartItems.length > 0" title="Clear all">
             <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -254,18 +263,8 @@
         </div>
       </div>
 
-      <div *ngIf="cartItems.length === 0" class="empty-cart-modern">
-        <div class="empty-cart-icon">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-          </svg>
-        </div>
-        <p class="empty-cart-text">Your cart is empty</p>
-        <p class="empty-cart-hint">Add items from the menu to get started</p>
-      </div>
-
       <!-- Cart Summary -->
-      <div class="cart-summary-modern" *ngIf="cartItems.length > 0">
+      <div class="cart-summary-modern">
         <div class="summary-section">
           <div class="summary-row-modern">
             <span class="summary-label">Subtotal</span>
@@ -287,7 +286,7 @@
       </div>
 
       <!-- Customer & Table Info -->
-      <div class="cart-actions-modern" *ngIf="cartItems.length > 0">
+      <div class="cart-actions-modern">
         <div class="action-grid">
           <button (click)="openCustomerModal()" class="action-btn-modern">
             <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,6 +334,17 @@
       </div>
     </div>
   </div>
+
+  <!-- Mobile cart floating button -->
+  <button 
+    class="mobile-cart-fab" 
+    *ngIf="isMobile && cartItems.length > 0" 
+    (click)="toggleMobileCart()">
+    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l1.5-8H6.5L7 13zm0 0L5 6m2 7l-2 7m12-7l2 7M9 21a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+    </svg>
+    <span class="mobile-cart-badge">{{ cartItems.length }}</span>
+  </button>
 </div>
 
 <!-- Payment Modal -->

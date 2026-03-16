@@ -33,6 +33,9 @@ body {
 .mat-mdc-raised-button,
 .mat-mdc-outlined-button {
   font-family: var(--font-family) !important;
+  font-size: 0.78rem !important;
+  padding: 0 10px !important;
+  min-height: 32px !important;
 }
 
 .mat-mdc-form-field {
@@ -69,6 +72,9 @@ body {
 
 .mat-mdc-icon-button {
   color: var(--color-text-tertiary) !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 4px !important;
 }
 
 .mat-mdc-icon-button:hover {

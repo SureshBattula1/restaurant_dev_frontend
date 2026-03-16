@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, FormArray, FormControl, AbstractControl, Validators } from '@angular/forms';
 import { PosService, Item, CreateSaleRequest } from '../../../core/services/pos.service';
@@ -123,6 +123,10 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   // Split billing
   splitBills!: FormArray;
 
+  // Responsive / mobile cart
+  isMobile = false;
+  showMobileCart = false;
+
   constructor(
     private fb: FormBuilder,
     private posService: PosService,
@@ -160,6 +164,7 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.updateIsMobile();
     // OPTIMIZATION: Load ONLY critical data initially for fast page load
     if (this.authService.isSuperAdmin()) {
       this.loadLocations();
@@ -183,6 +188,15 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     
     // Don't show sales list by default - user can toggle it
     this.showSalesList = false;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateIsMobile();
+  }
+
+  private updateIsMobile(): void {
+    this.isMobile = window.innerWidth <= 768;
   }
 
   ngOnDestroy(): void {
@@ -384,6 +398,10 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
     const searchQuery = this.searchForm.get('query')?.value || '';
     
     this.loadingItems = true;
+    // Clear existing items immediately so old data disappears while loading
+    this.items = [];
+    this.filteredItems = [];
+    this.totalItems = 0;
     // Use itemsPerPage if available, otherwise fallback to perPage
     const perPageValue = this.itemsPerPage || this.perPage || 20;
     
@@ -1116,6 +1134,13 @@ export class PosDashboardComponent implements OnInit, OnDestroy {
       return 'Enter percentage (e.g., 10)';
     }
     return 'Enter amount';
+  }
+
+  toggleMobileCart(): void {
+    if (this.cartItems.length === 0) {
+      return;
+    }
+    this.showMobileCart = !this.showMobileCart;
   }
 
   toggleSalesList(): void {

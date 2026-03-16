@@ -2,8 +2,8 @@
   <!-- Sidebar -->
   <mat-sidenav 
     #sidenav 
-    mode="side" 
-    opened="true"
+    [mode]="isMobile ? 'over' : 'side'"
+    [opened]="isMobile ? false : true"
     class="sidebar"
     [class.collapsed]="!sidebarOpen"
     [style.width.px]="sidebarOpen ? 280 : 80">
@@ -27,7 +27,8 @@
               [routerLink]="child.route"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{exact: child.route === '/cash-register'}"
-              class="nav-link nav-link-child">
+              class="nav-link nav-link-child"
+              (click)="onNavItemClick(sidenav)">
               <mat-icon matListItemIcon>{{ getMaterialIcon(child.route) }}</mat-icon>
               <span matListItemTitle *ngIf="sidebarOpen">{{ child.label }}</span>
             </a>
@@ -38,7 +39,8 @@
               [routerLink]="item.route"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{exact: false}"
-              class="nav-link">
+              class="nav-link"
+              (click)="onNavItemClick(sidenav)">
               <mat-icon matListItemIcon>{{ getMaterialIcon(item.route) }}</mat-icon>
               <span matListItemTitle *ngIf="sidebarOpen">{{ item.label }}</span>
             </a>
@@ -66,7 +68,18 @@
   </mat-sidenav>
 
   <!-- Main Content -->
-  <mat-sidenav-content class="main-content" [class.collapsed]="!sidebarOpen">
+  <mat-sidenav-content
+    class="main-content"
+    [class.collapsed]="!sidebarOpen"
+    [class.hidden-when-drawer-open]="isMobile && sidenav.opened">
+    <!-- Mobile Top Bar -->
+    <mat-toolbar class="top-toolbar" *ngIf="isMobile">
+      <button mat-icon-button (click)="sidenav.open()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="top-toolbar-title">Menu</span>
+    </mat-toolbar>
+
     <router-outlet></router-outlet>
   </mat-sidenav-content>
 </mat-sidenav-container>
