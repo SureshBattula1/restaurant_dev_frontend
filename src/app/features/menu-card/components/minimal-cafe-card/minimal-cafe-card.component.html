@@ -1,0 +1,11 @@
+<article class="minimal-card">
+  <div class="minimal-img-wrap" *ngIf="item.image_url">
+    <img class="minimal-img" [src]="item.image_url" [alt]="item.name" loading="lazy" />
+  </div>
+  <span class="minimal-icon" *ngIf="!item.image_url">{{ getIcon() }}</span>
+  <div class="minimal-content">
+    <h3 class="minimal-title">{{ item.name }}</h3>
+    <span class="minimal-price">₹{{ item.display_price | number:'1.2-2' }}</span>
+  </div>
+  <button type="button" class="minimal-order-btn" (click)="onOrder(); $event.stopPropagation()">Order</button>
+</article>

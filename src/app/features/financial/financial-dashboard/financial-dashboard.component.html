@@ -1,0 +1,82 @@
+<div class="financial-container">
+  <!-- Loader Overlay -->
+  <app-loader *ngIf="loading" size="large" [overlay]="true" message="Loading financial data..."></app-loader>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Financial Dashboard</h1>
+    <div class="header-actions">
+      <div class="filters-row">
+        <div class="form-group form-group-inline">
+          <label class="form-label">From</label>
+          <input type="date" [(ngModel)]="dateFrom" (change)="loadDashboard()" class="form-input" />
+        </div>
+        <div class="form-group form-group-inline">
+          <label class="form-label">To</label>
+          <input type="date" [(ngModel)]="dateTo" (change)="loadDashboard()" class="form-input" />
+        </div>
+        <app-branch-selector
+          *ngIf="isSuperAdmin()"
+          [(selectedLocationId)]="selectedLocationId"
+          (selectedLocationIdChange)="onBranchChange($event)">
+        </app-branch-selector>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Section -->
+  <div class="content-section">
+    <!-- Summary Cards -->
+    <div *ngIf="dashboardData?.summary" class="summary-cards">
+      <div class="summary-card summary-card-revenue">
+        <div class="summary-card-label">Revenue</div>
+        <div class="summary-card-value">₹{{ dashboardData.summary.revenue | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card summary-card-expenses">
+        <div class="summary-card-label">Total Expenses</div>
+        <div class="summary-card-value">₹{{ dashboardData.summary.total_expenses | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card summary-card-profit">
+        <div class="summary-card-label">Net Profit</div>
+        <div class="summary-card-value">₹{{ dashboardData.summary.net_profit | number:'1.0-0' }}</div>
+      </div>
+      <div class="summary-card summary-card-margin">
+        <div class="summary-card-label">Profit Margin</div>
+        <div class="summary-card-value">{{ dashboardData.summary.profit_margin | number:'1.0-2' }}%</div>
+      </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <h2 class="section-title">Revenue vs Expenses Trend</h2>
+      <div class="chart-wrapper">
+        <canvas id="financialChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Branch wise reports -->
+    <div *ngIf="dashboardData?.branch_breakdown?.length" class="breakdown-section">
+      <h2 class="section-title">Branch wise reports</h2>
+      <div class="breakdown-table-wrapper">
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <th>Branch</th>
+              <th>Revenue</th>
+              <th>Expenses</th>
+              <th>Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let branch of dashboardData.branch_breakdown">
+              <td>{{ branch.location_name }}</td>
+              <td>₹{{ branch.revenue | number:'1.0-0' }}</td>
+              <td>₹{{ branch.total_expenses | number:'1.0-0' }}</td>
+              <td>₹{{ branch.profit | number:'1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

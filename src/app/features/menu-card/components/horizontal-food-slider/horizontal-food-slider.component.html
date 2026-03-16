@@ -1,0 +1,15 @@
+<div class="slider-wrapper">
+  <button type="button" class="slider-nav slider-prev" aria-label="Scroll left" (click)="scroll('left')">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+  </button>
+  <div class="slider-container" #scrollEl>
+    <div class="slider-track">
+      <div *ngFor="let item of items" class="slider-card">
+        <app-modern-food-card [item]="item" (order)="onOrder($event)" />
+      </div>
+    </div>
+  </div>
+  <button type="button" class="slider-nav slider-next" aria-label="Scroll right" (click)="scroll('right')">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+  </button>
+</div>

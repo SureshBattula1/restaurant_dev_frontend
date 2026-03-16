@@ -1,0 +1,54 @@
+<section class="menu-section">
+  <h2 class="menu-section-title">Our Menu</h2>
+  <app-category-filter
+    [categories]="categories"
+    [selectedCategory]="selectedCategory"
+    (categoryChange)="categoryChange.emit($event)"
+  />
+  <app-menu-search (searchChange)="onSearchChange($event)"></app-menu-search>
+
+  <ng-container [ngSwitch]="cardStyle">
+    <div *ngSwitchCase="'simple'" class="menu-list" [appMenuCardListReveal]="(selectedCategory?.id ?? 'all') + '-' + items.length">
+      <app-simple-menu-card
+        *ngFor="let item of items"
+        [item]="item"
+        (order)="order.emit($event)"
+      />
+    </div>
+    <div *ngSwitchCase="'grid'" class="menu-grid" [appMenuCardListReveal]="(selectedCategory?.id ?? 'all') + '-' + items.length">
+      <app-modern-food-card
+        *ngFor="let item of items"
+        [item]="item"
+        (order)="order.emit($event)"
+      />
+    </div>
+    <div *ngSwitchCase="'featured'" class="menu-grid menu-grid-featured" [appMenuCardListReveal]="(selectedCategory?.id ?? 'all') + '-' + items.length">
+      <app-featured-dish-card
+        *ngFor="let item of items"
+        [item]="item"
+        (order)="order.emit($event)"
+      />
+    </div>
+    <div *ngSwitchCase="'minimal'" class="menu-minimal" [appMenuCardListReveal]="(selectedCategory?.id ?? 'all') + '-' + items.length">
+      <app-minimal-cafe-card
+        *ngFor="let item of items"
+        [item]="item"
+        (order)="order.emit($event)"
+      />
+    </div>
+    <div *ngSwitchCase="'glass'" class="menu-grid" [appMenuCardListReveal]="(selectedCategory?.id ?? 'all') + '-' + items.length">
+      <app-floating-glass-card
+        *ngFor="let item of items"
+        [item]="item"
+        (order)="order.emit($event)"
+      />
+    </div>
+    <app-horizontal-food-slider
+      *ngSwitchCase="'slider'"
+      [items]="items"
+      (order)="order.emit($event)"
+    />
+  </ng-container>
+
+  <p class="empty-state" *ngIf="items.length === 0">No items in this category.</p>
+</section>

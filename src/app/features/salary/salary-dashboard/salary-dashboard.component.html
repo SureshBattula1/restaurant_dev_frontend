@@ -1,0 +1,260 @@
+<div class="salary-container">
+  <!-- Loader Overlay -->
+  <app-loader *ngIf="loading" size="large" [overlay]="true" message="Processing salary calculation..."></app-loader>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Salary & Advances</h1>
+    <div class="header-actions">
+      <div *ngIf="isSuperAdmin()" class="location-filter-header">
+        <label class="filter-label">Branch</label>
+        <app-branch-selector
+          [(selectedLocationId)]="selectedLocationId"
+          (selectedLocationIdChange)="onBranchChange()">
+        </app-branch-selector>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <button
+      [class.active]="activeTab === 'salary'"
+      (click)="activeTab = 'salary'"
+      class="tab-btn">
+      Salary
+    </button>
+    <button
+      [class.active]="activeTab === 'advances'"
+      (click)="activeTab = 'advances'; advancesRealtimeUpdates$.next({ type: 'refresh' })"
+      class="tab-btn">
+      Advances
+    </button>
+  </div>
+
+  <!-- Salary Tab -->
+  <div class="content-section" *ngIf="activeTab === 'salary'">
+    <div class="filter-card">
+      <h2 class="section-title">Calculate Salary</h2>
+      <form [formGroup]="calculateForm" (ngSubmit)="calculateSalary()" class="calculate-form">
+        <div class="form-group">
+          <label class="form-label">Employee ID</label>
+          <input type="number" formControlName="employee_id" placeholder="Employee ID" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Month</label>
+          <input type="number" formControlName="month" min="1" max="12" class="form-input" placeholder="1-12" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Year</label>
+          <input type="number" formControlName="year" min="2000" max="2100" class="form-input" placeholder="e.g. 2025" />
+        </div>
+        <div class="form-group form-group-actions">
+          <button type="submit" [disabled]="calculateForm.invalid || loading" class="btn-primary">Calculate</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Calculation Result -->
+    <div *ngIf="calculation" class="result-card">
+      <h3 class="section-title">Calculation Result</h3>
+      <div class="result-grid">
+        <div class="result-item"><span class="result-label">Base Salary:</span> <span class="result-value">₹{{ calculation.base_salary | number:'1.2-2' }}</span></div>
+        <div class="result-item"><span class="result-label">Overtime Hours:</span> <span class="result-value">{{ calculation.overtime_hours }}</span></div>
+        <div class="result-item"><span class="result-label">Overtime Amount:</span> <span class="result-value">₹{{ calculation.overtime_amount | number:'1.2-2' }}</span></div>
+        <div class="result-item"><span class="result-label">Deductions:</span> <span class="result-value">₹{{ calculation.deductions | number:'1.2-2' }}</span></div>
+        <div class="result-item"><span class="result-label">Net Salary:</span> <span class="result-value result-value-highlight">₹{{ calculation.net_salary | number:'1.2-2' }}</span></div>
+      </div>
+    </div>
+
+    <!-- Salary Records -->
+    <div class="records-section">
+      <div class="section-header">
+        <h2 class="section-title">Salary Records</h2>
+        <div class="records-filters">
+          <select [(ngModel)]="selectedMonth" (change)="loadSalaries(); salariesRealtimeUpdates$.next({ type: 'refresh' })" class="form-select filter-select">
+            <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">{{ m }}</option>
+          </select>
+          <input type="number" [(ngModel)]="selectedYear" (change)="loadSalaries(); salariesRealtimeUpdates$.next({ type: 'refresh' })" class="form-input filter-input" placeholder="Year" />
+        </div>
+      </div>
+
+      <app-data-table
+        [config]="salariesTableConfig"
+        [data]="salariesTableData"
+        [pagination]="salariesTablePagination"
+        [loading]="salariesTableLoading"
+        [loadDataFn]="loadSalariesTableData"
+        [enableRealtime]="true"
+        [realtimeUpdates$]="salariesRealtimeUpdates$">
+      </app-data-table>
+    </div>
+  </div>
+
+  <!-- Advances Tab -->
+  <div class="content-section" *ngIf="activeTab === 'advances'">
+    <div class="section-header">
+      <h2 class="section-title">Advance Payments</h2>
+      <button (click)="openAdvanceModal()" class="btn-primary">
+        <mat-icon>add</mat-icon> Add Advance
+      </button>
+    </div>
+
+    <app-data-table
+      [config]="advancesTableConfig"
+      [data]="advancesTableData"
+      [pagination]="advancesTablePagination"
+      [loading]="advancesTableLoading"
+      [loadDataFn]="loadAdvancesTableData"
+      [enableRealtime]="true"
+      [realtimeUpdates$]="advancesRealtimeUpdates$">
+    </app-data-table>
+  </div>
+
+  <!-- Advance Payment Modal -->
+  <div class="modal-overlay" *ngIf="showAdvanceModal" (click)="closeAdvanceModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedAdvance ? 'Edit' : 'Add' }} Advance Payment</h3>
+        <button (click)="closeAdvanceModal()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="advancePaymentForm" (ngSubmit)="saveAdvancePayment()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Location *</label>
+          <select formControlName="location_id" class="form-select" [disabled]="!isSuperAdmin()">
+            <option value="">Select Location</option>
+            <option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</option>
+          </select>
+          <small *ngIf="!isSuperAdmin()" class="text-muted">Your location is automatically selected</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Employee *</label>
+          <select formControlName="employee_id" class="form-select" [disabled]="!advancePaymentForm.get('location_id')?.value">
+            <option value="">{{ advancePaymentForm.get('location_id')?.value ? 'Select Employee' : 'Select Location First' }}</option>
+            <option *ngFor="let emp of employees" [value]="emp.id">
+              {{ getEmployeeDisplayName(emp) }}
+            </option>
+          </select>
+          <small *ngIf="employees.length === 0 && advancePaymentForm.get('location_id')?.value" class="text-muted">No employees found for this location</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Date *</label>
+          <input type="date" formControlName="payment_date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount *</label>
+          <input type="number" formControlName="amount" step="0.01" min="0.01" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <textarea formControlName="reason" class="form-textarea" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea formControlName="notes" class="form-textarea" rows="2"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="closeAdvanceModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="advancePaymentForm.invalid" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Salary Detail Modal -->
+  <div class="modal-overlay" *ngIf="showViewSalaryModal" (click)="closeViewSalaryModal()">
+    <div class="modal-content view-salary-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Salary Details</h3>
+        <button type="button" (click)="closeViewSalaryModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body" *ngIf="selectedSalary">
+        <div class="view-salary-grid">
+          <div class="view-salary-row">
+            <span class="view-salary-label">Employee</span>
+            <span class="view-salary-value">{{ getEmployeeDisplayName(selectedSalary.employee) || 'N/A' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Location</span>
+            <span class="view-salary-value">{{ selectedSalary.location?.name || 'N/A' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Period</span>
+            <span class="view-salary-value">{{ selectedSalary.salary_month }} / {{ selectedSalary.salary_year }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Payment Date</span>
+            <span class="view-salary-value">{{ selectedSalary.payment_date | date:'mediumDate' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Base Salary</span>
+            <span class="view-salary-value">₹{{ selectedSalary.base_salary | number:'1.2-2' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Overtime (hours / amount)</span>
+            <span class="view-salary-value">{{ selectedSalary.overtime_hours | number:'1.2-2' }} hrs — ₹{{ selectedSalary.overtime_amount | number:'1.2-2' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Deductions</span>
+            <span class="view-salary-value">₹{{ selectedSalary.deductions | number:'1.2-2' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Bonus</span>
+            <span class="view-salary-value">₹{{ selectedSalary.bonus | number:'1.2-2' }}</span>
+          </div>
+          <div class="view-salary-row view-salary-row-highlight">
+            <span class="view-salary-label">Net Salary</span>
+            <span class="view-salary-value">₹{{ selectedSalary.net_salary | number:'1.2-2' }}</span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Status</span>
+            <span class="view-salary-value"><span [class]="'badge ' + (selectedSalary.status === 'paid' ? 'bg-success' : selectedSalary.status === 'pending' ? 'bg-warning' : 'bg-secondary')">{{ selectedSalary.status }}</span></span>
+          </div>
+          <div class="view-salary-row">
+            <span class="view-salary-label">Payment Method</span>
+            <span class="view-salary-value">{{ selectedSalary.payment_method || '-' }}</span>
+          </div>
+          <div class="view-salary-row" *ngIf="selectedSalary.notes">
+            <span class="view-salary-label">Notes</span>
+            <span class="view-salary-value">{{ selectedSalary.notes }}</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="closeViewSalaryModal()" class="btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pay Salary Modal -->
+  <div class="modal-overlay" *ngIf="showPayModal" (click)="showPayModal = false">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Process Payment</h3>
+        <button type="button" (click)="showPayModal = false" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="payForm" (ngSubmit)="paySalary()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <select formControlName="location_id" class="form-select">
+            <option value="">Select Location</option>
+            <option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <select formControlName="payment_method" class="form-select">
+            <option value="cash">Cash</option>
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="cheque">Cheque</option>
+            <option value="online">Online</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="showPayModal = false" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="payForm.invalid || loading" class="btn-primary">Pay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

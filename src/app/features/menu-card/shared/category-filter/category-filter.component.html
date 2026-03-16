@@ -1,0 +1,19 @@
+<nav class="category-filter">
+  <button
+    type="button"
+    class="category-pill"
+    [class.active]="!selectedCategory"
+    (click)="selectCategory(null)"
+  >
+    All
+  </button>
+  <button
+    *ngFor="let cat of categories"
+    type="button"
+    class="category-pill"
+    [class.active]="selectedCategory?.id === cat.id"
+    (click)="selectCategory(cat)"
+  >
+    {{ cat.name }}
+  </button>
+</nav>

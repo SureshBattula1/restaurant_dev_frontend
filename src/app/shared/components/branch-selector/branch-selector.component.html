@@ -1,0 +1,4 @@
+<select [(ngModel)]="selectedLocationId" (change)="onLocationChange()" class="border rounded px-3 py-2">
+  <option [ngValue]="null">All Locations</option>
+  <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+</select>

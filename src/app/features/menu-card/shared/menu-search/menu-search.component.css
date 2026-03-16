@@ -1,0 +1,72 @@
+.menu-search {
+  position: relative;
+  margin-bottom: 1.5rem;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--mc-text-muted);
+  pointer-events: none;
+  transition: color var(--mc-transition);
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.85rem 2.75rem 0.85rem 2.75rem;
+  border: 1px solid var(--mc-border);
+  border-radius: 0.5rem;
+  font-family: var(--mc-font-body);
+  font-size: 1rem;
+  background: var(--mc-bg-card);
+  color: var(--mc-charcoal);
+  transition: border-color var(--mc-transition), box-shadow var(--mc-transition);
+}
+
+.search-input::placeholder {
+  color: var(--mc-text-muted);
+}
+
+.menu-search:focus-within .search-icon {
+  color: var(--mc-accent-cta);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--mc-accent-cta);
+  box-shadow: var(--mc-focus-ring);
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--mc-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--mc-transition), background var(--mc-transition-fast);
+}
+
+.search-clear:hover {
+  color: var(--mc-accent-cta);
+  background: var(--mc-badge-spicy-bg);
+}
+
+.search-clear:focus {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}

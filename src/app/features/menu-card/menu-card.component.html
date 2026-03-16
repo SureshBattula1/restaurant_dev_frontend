@@ -1,0 +1,87 @@
+<div class="menu-card-page">
+  <header class="menu-card-header" [class.header-scrolled]="headerScrolled">
+    <h1 class="menu-card-title">{{ data?.location?.name || 'Our Restaurant' }}</h1>
+    <div class="header-controls" *ngIf="branches.length > 1 || data">
+      <div class="control-group branch-selector" *ngIf="branches.length > 1">
+        <label for="branch-select" class="control-label">Branch</label>
+        <select
+          id="branch-select"
+          [ngModel]="selectedBranchId"
+          (ngModelChange)="onBranchChange($event)"
+          class="header-select"
+        >
+          <option *ngFor="let b of branches" [value]="b.id">{{ b.name }}</option>
+        </select>
+      </div>
+      <div class="control-group style-selector" *ngIf="data">
+        <label for="style-select" class="control-label">View</label>
+        <select id="style-select" [(ngModel)]="cardStyle" class="header-select">
+          <option value="grid">Grid</option>
+          <option value="simple">Simple List</option>
+          <option value="featured">Featured</option>
+          <option value="minimal">Minimal</option>
+          <option value="glass">Glass</option>
+          <option value="slider">Slider</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <div class="loading-state" *ngIf="loading && !data && !error">
+    <div class="skeleton-grid" aria-hidden="true">
+      <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-desc"></div>
+        <div class="skeleton-line skeleton-price"></div>
+      </div>
+    </div>
+    <p class="loading-text">Loading menu...</p>
+  </div>
+
+  <div class="empty-branches" *ngIf="!loading && branches.length === 0 && !selectedBranchId && !error">
+    <p class="empty-message">No branches available with menu items.</p>
+  </div>
+
+  <div class="error-state" *ngIf="error && !loading">
+    <p class="error-message">{{ error }}</p>
+    <button type="button" class="retry-btn" (click)="retry()" aria-label="Retry loading menu">Try again</button>
+  </div>
+
+  <main class="menu-card-main" *ngIf="data && !loading">
+    <section appGsapReveal="fadeUp">
+    <app-hero-section
+      [restaurantName]="data.location.name"
+      tagline="Exquisite dining experience"
+      (reserveClick)="openReservation()"
+    />
+    </section>
+    <section appGsapReveal="fadeUp" [gsapDelay]="0.1">
+    <app-about-section />
+    <app-menu-cards-section
+      [categories]="data.categories"
+      [selectedCategory]="selectedCategory"
+      [cardStyle]="cardStyle"
+      (categoryChange)="selectCategory($event)"
+      (order)="onOrder()"
+    />
+    </section>
+    <section appGsapReveal="fadeUp" [gsapDelay]="0.2">
+    <app-gallery-section />
+    </section>
+    <section appGsapReveal="fadeUp" [gsapDelay]="0.25">
+    <app-reservation-section (reserveClick)="openReservation()" />
+    </section>
+    <app-footer-section
+      [restaurantName]="data.location.name"
+      address="123 Restaurant Street"
+      phone="+1 234 567 8900"
+      email="info&#64;restaurant.com"
+    />
+  </main>
+
+  <app-reservation-popup
+    *ngIf="showReservationPopup"
+    (close)="closeReservation()"
+  />
+</div>

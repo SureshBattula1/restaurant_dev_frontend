@@ -1,0 +1,40 @@
+.cash-register-module {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cash-register-module .tabs-container {
+  display: flex;
+  gap: var(--spacing-sm, 0.5rem);
+  padding: 0 var(--spacing-xl, 1.5rem);
+  background: var(--color-bg-white, #fff);
+  border-bottom: 2px solid var(--color-border-light, #e5e7eb);
+  flex-shrink: 0;
+}
+
+.cash-register-module .tab-link {
+  padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+  color: var(--color-text-tertiary, #6b7280);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  transition: all 0.2s;
+  position: relative;
+  bottom: -2px;
+  font-size: 0.875rem;
+}
+
+.cash-register-module .tab-link:hover {
+  color: var(--color-text-secondary, #374151);
+}
+
+.cash-register-module .tab-link.active {
+  color: var(--color-primary, #2563eb);
+  border-bottom-color: var(--color-primary, #2563eb);
+}
+
+.cash-register-module router-outlet + * {
+  flex: 1;
+  min-height: 0;
+}

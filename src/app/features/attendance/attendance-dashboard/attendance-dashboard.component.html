@@ -1,0 +1,302 @@
+<div class="attendance-container">
+  <!-- Loader Overlay -->
+  <app-loader *ngIf="loading" size="large" [overlay]="true" message="Processing..."></app-loader>
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>event_available</mat-icon> Attendance Management
+    </h1>
+    <mat-chip *ngIf="isSuperAdmin() && currentUser && currentUser.location">
+      <mat-icon>location_on</mat-icon>
+      {{ currentUser.location.name || 'Main Branch' }}
+    </mat-chip>
+  </div>
+
+  <mat-card class="attendance-card">
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">
+      <mat-tab label="Daily View">
+        <ng-template matTabContent>
+          <div class="tab-content">
+            <!-- Location Filter (if super admin) -->
+            <div class="filter-section" *ngIf="isSuperAdmin()">
+              <mat-form-field appearance="outline" class="location-filter">
+                <mat-label>Branch/Location</mat-label>
+                <mat-select [(ngModel)]="selectedLocationId" (selectionChange)="onLocationChange()">
+                  <mat-option [value]="undefined">All Locations</mat-option>
+                  <mat-option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</mat-option>
+                </mat-select>
+                <mat-icon matPrefix>location_on</mat-icon>
+              </mat-form-field>
+            </div>
+            
+            <app-data-table
+              [config]="attendanceTableConfig"
+              [data]="attendanceTableData"
+              [pagination]="attendanceTablePagination"
+              [loading]="attendanceTableLoading"
+              [loadDataFn]="loadAttendanceTableData"
+              [enableRealtime]="true"
+              [realtimeUpdates$]="attendanceRealtimeUpdates$">
+            </app-data-table>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <mat-tab label="Create Attendance">
+        <ng-template matTabContent>
+          <div class="tab-content">
+            <form [formGroup]="createAttendanceForm" (ngSubmit)="createAttendance()" class="attendance-form">
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Employee *</mat-label>
+                  <mat-select formControlName="employee_id">
+                    <mat-option value="">Select Employee</mat-option>
+                    <mat-option *ngFor="let emp of employees" [value]="emp.id">
+                      {{ emp.person?.first_name }} {{ emp.person?.last_name }} ({{ emp.employee_number }})
+                    </mat-option>
+                  </mat-select>
+                  <mat-icon matPrefix>person</mat-icon>
+                  <mat-error *ngIf="createAttendanceForm.get('employee_id')?.invalid && createAttendanceForm.get('employee_id')?.touched">
+                    Employee is required
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Location *</mat-label>
+                  <mat-select formControlName="location_id" (selectionChange)="onCreateLocationChange()">
+                    <mat-option value="">Select Location</mat-option>
+                    <mat-option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</mat-option>
+                  </mat-select>
+                  <mat-icon matPrefix>location_on</mat-icon>
+                  <mat-error *ngIf="createAttendanceForm.get('location_id')?.invalid && createAttendanceForm.get('location_id')?.touched">
+                    Location is required
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Date *</mat-label>
+                  <input matInput type="date" formControlName="date">
+                  <mat-icon matPrefix>calendar_today</mat-icon>
+                  <mat-error *ngIf="createAttendanceForm.get('date')?.invalid && createAttendanceForm.get('date')?.touched">
+                    Date is required
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Status *</mat-label>
+                  <mat-select formControlName="status">
+                    <mat-option value="present">Present</mat-option>
+                    <mat-option value="absent">Absent</mat-option>
+                    <mat-option value="late">Late</mat-option>
+                    <mat-option value="half_day">Half Day</mat-option>
+                  </mat-select>
+                  <mat-icon matPrefix>check_circle</mat-icon>
+                  <mat-error *ngIf="createAttendanceForm.get('status')?.invalid && createAttendanceForm.get('status')?.touched">
+                    Status is required
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Check In Time</mat-label>
+                  <input matInput type="time" formControlName="check_in_time">
+                  <mat-icon matPrefix>schedule</mat-icon>
+                  <mat-hint>Leave empty if not applicable</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Check Out Time</mat-label>
+                  <input matInput type="time" formControlName="check_out_time">
+                  <mat-icon matPrefix>schedule</mat-icon>
+                  <mat-hint>Leave empty if not applicable</mat-hint>
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Notes</mat-label>
+                <textarea matInput formControlName="notes" rows="3" placeholder="Optional notes..."></textarea>
+                <mat-icon matPrefix>note</mat-icon>
+              </mat-form-field>
+
+              <div class="form-actions">
+                <button mat-raised-button color="primary" type="submit" [disabled]="createAttendanceForm.invalid || loading">
+                  <mat-icon *ngIf="!loading">{{ editingAttendanceId ? 'update' : 'add' }}</mat-icon>
+                  <mat-spinner *ngIf="loading" diameter="20" class="inline-spinner"></mat-spinner>
+                  <span *ngIf="!loading">{{ editingAttendanceId ? 'Update Attendance' : 'Create Attendance' }}</span>
+                  <span *ngIf="loading">{{ editingAttendanceId ? 'Updating...' : 'Creating...' }}</span>
+                </button>
+                <button mat-button type="button" (click)="resetCreateForm()">
+                  <mat-icon>{{ editingAttendanceId ? 'close' : 'refresh' }}</mat-icon>
+                  {{ editingAttendanceId ? 'Cancel Edit' : 'Reset' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </ng-template>
+      </mat-tab>
+
+      <mat-tab label="Bulk Entry">
+        <ng-template matTabContent>
+          <div class="tab-content">
+            <form [formGroup]="bulkAttendanceForm" (ngSubmit)="saveBulkAttendance()">
+              <!-- Filters -->
+              <mat-card class="filter-card">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>filter_list</mat-icon> Filters
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="filter-row">
+                    <mat-form-field appearance="outline" class="filter-field">
+                      <mat-label>Date *</mat-label>
+                      <input matInput [matDatepicker]="bulkDatePicker" formControlName="date" (dateChange)="onBulkDateLocationChange()">
+                      <mat-datepicker-toggle matSuffix [for]="bulkDatePicker"></mat-datepicker-toggle>
+                      <mat-datepicker #bulkDatePicker></mat-datepicker>
+                      <mat-icon matPrefix>calendar_today</mat-icon>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="filter-field">
+                      <mat-label>Location/Branch *</mat-label>
+                      <mat-select formControlName="location_id" (selectionChange)="onBulkDateLocationChange()">
+                        <mat-option value="">Select Location</mat-option>
+                        <mat-option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</mat-option>
+                      </mat-select>
+                      <mat-icon matPrefix>location_on</mat-icon>
+                    </mat-form-field>
+
+                    <button mat-raised-button color="primary" type="button" (click)="loadBulkEmployees()" 
+                            [disabled]="!bulkAttendanceForm.get('date')?.value || !bulkAttendanceForm.get('location_id')?.value"
+                            class="load-button">
+                      <mat-icon>refresh</mat-icon> Load Employees
+                    </button>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Bulk Actions -->
+              <div class="bulk-actions" *ngIf="bulkEmployeesFormArray.length > 0">
+                <mat-card>
+                  <mat-card-content>
+                    <div class="action-buttons">
+                      <button mat-stroked-button type="button" (click)="selectAllEmployees()">
+                        <mat-icon>check_box</mat-icon> Select All
+                      </button>
+                      <button mat-stroked-button type="button" (click)="deselectAllEmployees()">
+                        <mat-icon>check_box_outline_blank</mat-icon> Deselect All
+                      </button>
+                      <button mat-stroked-button color="primary" type="button" (click)="setAllStatus('present')">
+                        <mat-icon>check_circle</mat-icon> Present All
+                      </button>
+                      <button mat-stroked-button color="warn" type="button" (click)="setAllStatus('absent')">
+                        <mat-icon>cancel</mat-icon> Absent All
+                      </button>
+                      <button mat-stroked-button type="button" (click)="autoSetAllTimes()">
+                        <mat-icon>access_time</mat-icon> Auto Set Time All
+                      </button>
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+
+              <!-- Employees Table -->
+              <div class="bulk-table-container" *ngIf="bulkEmployeesFormArray.length > 0">
+                <mat-card>
+                  <mat-card-header>
+                    <mat-card-title>
+                      <mat-icon>people</mat-icon> Employees ({{ getSelectedCount() }} selected)
+                    </mat-card-title>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <div class="table-wrapper">
+                      <table class="bulk-table">
+                        <thead>
+                          <tr>
+                            <th>
+                              <mat-checkbox [checked]="allSelected" (change)="toggleSelectAll($event)"></mat-checkbox>
+                            </th>
+                            <th>Employee</th>
+                            <th>Status</th>
+                            <th>Check In</th>
+                            <th>Check Out</th>
+                            <th>Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody formArrayName="employees">
+                          <tr *ngFor="let empControl of bulkEmployeesFormArray.controls; let i = index" [formGroupName]="i" class="employee-row">
+                            <td>
+                              <mat-checkbox formControlName="selected"></mat-checkbox>
+                            </td>
+                            <td>
+                              <div class="employee-info">
+                                <strong>{{ getEmployeeName(i) }}</strong>
+                                <br>
+                                <span class="employee-number">{{ getEmployeeNumber(i) }}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <mat-form-field appearance="outline" class="status-field">
+                                <mat-select formControlName="status">
+                                  <mat-option value="present">Present</mat-option>
+                                  <mat-option value="absent">Absent</mat-option>
+                                  <mat-option value="late">Late</mat-option>
+                                  <mat-option value="half_day">Half Day</mat-option>
+                                </mat-select>
+                              </mat-form-field>
+                            </td>
+                            <td>
+                              <mat-form-field appearance="outline" class="time-field">
+                                <input matInput type="time" formControlName="check_in_time">
+                              </mat-form-field>
+                            </td>
+                            <td>
+                              <mat-form-field appearance="outline" class="time-field">
+                                <input matInput type="time" formControlName="check_out_time">
+                              </mat-form-field>
+                            </td>
+                            <td>
+                              <mat-form-field appearance="outline" class="notes-field">
+                                <input matInput formControlName="notes" placeholder="Notes...">
+                              </mat-form-field>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              </div>
+
+              <!-- Empty State -->
+              <mat-card *ngIf="bulkEmployeesFormArray.length === 0" class="empty-state-card">
+                <mat-card-content>
+                  <div class="empty-state">
+                    <mat-icon class="empty-icon">event_busy</mat-icon>
+                    <h3>No Employees Loaded</h3>
+                    <p>Select a date and location, then click "Load Employees" to start bulk entry.</p>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+
+              <!-- Save Button -->
+              <div class="save-actions" *ngIf="bulkEmployeesFormArray.length > 0">
+                <button mat-raised-button color="primary" type="submit" 
+                        [disabled]="bulkAttendanceForm.invalid || loading || getSelectedCount() === 0"
+                        class="save-button">
+                  <mat-icon>save</mat-icon>
+                  <span *ngIf="!loading">Save Bulk Attendance ({{ getSelectedCount() }} selected)</span>
+                  <span *ngIf="loading">Saving...</span>
+                  <mat-spinner *ngIf="loading" diameter="20" class="inline-spinner"></mat-spinner>
+                </button>
+              </div>
+            </form>
+          </div>
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-card>
+</div>

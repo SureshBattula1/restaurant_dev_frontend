@@ -1,0 +1,13 @@
+<article class="featured-card">
+  <span class="featured-badge" *ngIf="item.chef_recommended">Chef Recommendation</span>
+  <div class="featured-img-wrap">
+    <img *ngIf="item.image_url" [src]="item.image_url" [alt]="item.name" loading="lazy" />
+    <div *ngIf="!item.image_url" class="featured-placeholder"><span>{{ item.name.charAt(0) }}</span></div>
+  </div>
+  <div class="featured-body">
+    <h3 class="featured-title">{{ item.name }}</h3>
+    <p class="featured-desc" *ngIf="item.description">{{ item.description }}</p>
+    <span class="featured-price">₹{{ item.display_price | number:'1.2-2' }}</span>
+    <button type="button" class="featured-order-btn" (click)="onOrder()">Order Now</button>
+  </div>
+</article>

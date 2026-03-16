@@ -1,0 +1,277 @@
+<div class="reports-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Reports & Analytics</h1>
+  </div>
+
+  <!-- Report Tabs -->
+  <div class="tabs-container">
+    <button
+      *ngFor="let report of ['sales', 'inventory', 'accounting']"
+      (click)="switchReport(report)"
+      [class.active]="activeReport === report"
+      class="tab-btn"
+    >
+      {{ report | titlecase }} Reports
+    </button>
+  </div>
+
+  <!-- Sales Reports -->
+  <div class="content-section" *ngIf="activeReport === 'sales'">
+    <div class="report-form-card">
+      <h2 class="section-title">Sales Report</h2>
+      <form [formGroup]="salesReportForm" (ngSubmit)="generateSalesReport()" class="report-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date From</label>
+            <input type="date" formControlName="date_from" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date To</label>
+            <input type="date" formControlName="date_to" class="form-input" />
+          </div>
+          <div class="form-group" *ngIf="isSuperAdmin()">
+            <label class="form-label">Location</label>
+            <select [(ngModel)]="selectedLocationId" [ngModelOptions]="{standalone: true}" class="form-input">
+              <option [ngValue]="null">All Locations</option>
+              <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <button type="submit" [disabled]="salesReportForm.invalid || loading" class="btn-primary">
+              {{ loading ? 'Generating...' : 'Generate Report' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Loader -->
+    <div *ngIf="loading && !salesData" class="report-loader">
+      <app-loader size="large" message="Generating sales report..."></app-loader>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!loading && !salesData && salesReportForm.valid" class="empty-state">
+      <p>Click "Generate Report" to view sales data for the selected period.</p>
+    </div>
+
+    <div *ngIf="salesData" class="report-results">
+      <div class="results-header">
+        <h3 class="results-title">Sales Report Results</h3>
+        <div class="export-buttons">
+          <button (click)="exportReport('pdf')" class="btn-export">Export PDF</button>
+          <button (click)="exportReport('excel')" class="btn-export">Export Excel</button>
+          <button (click)="exportReport('csv')" class="btn-export">Export CSV</button>
+        </div>
+      </div>
+      <div class="results-content">
+        <div class="chart-container" *ngIf="salesData">
+          <canvas id="salesChart"></canvas>
+        </div>
+        <div class="data-table-container" *ngIf="salesData?.items && salesData.items.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Times Sold</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of salesData.items">
+                <td>{{ item.name || item.item_name }}</td>
+                <td>{{ item.sku || '-' }}</td>
+                <td>{{ item.total_quantity || 0 }}</td>
+                <td>{{ item.times_sold || 0 }}</td>
+                <td>₹{{ item.total_revenue || 0 | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="salesData && (!salesData.items || salesData.items.length === 0)" class="empty-state">
+          <p>No sales data available for the selected period.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inventory Reports -->
+  <div class="content-section" *ngIf="activeReport === 'inventory'">
+    <div class="report-form-card">
+      <h2 class="section-title">Inventory Report</h2>
+      <form [formGroup]="inventoryReportForm" (ngSubmit)="generateInventoryReport()" class="report-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date From</label>
+            <input type="date" formControlName="date_from" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date To</label>
+            <input type="date" formControlName="date_to" class="form-input" />
+          </div>
+          <div class="form-group" *ngIf="isSuperAdmin()">
+            <label class="form-label">Location</label>
+            <select [(ngModel)]="selectedLocationId" [ngModelOptions]="{standalone: true}" class="form-input">
+              <option [ngValue]="null">All Locations</option>
+              <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <button type="submit" [disabled]="inventoryReportForm.invalid || loading" class="btn-primary">
+              {{ loading ? 'Generating...' : 'Generate Report' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Loader -->
+    <div *ngIf="loading && !inventoryData" class="report-loader">
+      <app-loader size="large" message="Generating inventory report..."></app-loader>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!loading && !inventoryData && inventoryReportForm.valid" class="empty-state">
+      <p>Click "Generate Report" to view inventory data for the selected period.</p>
+    </div>
+
+    <div *ngIf="inventoryData" class="report-results">
+      <div class="results-header">
+        <h3 class="results-title">Inventory Report Results</h3>
+        <div class="export-buttons">
+          <button (click)="exportReport('pdf')" class="btn-export">Export PDF</button>
+          <button (click)="exportReport('excel')" class="btn-export">Export Excel</button>
+        </div>
+      </div>
+      <div class="results-content">
+        <div class="summary-cards" *ngIf="inventoryData">
+          <div class="summary-card">
+            <h4>Total Items</h4>
+            <p class="amount">{{ inventoryData.total_items || 0 }}</p>
+          </div>
+          <div class="summary-card">
+            <h4>Total Value</h4>
+            <p class="amount">₹{{ inventoryData.total_value || 0 | number:'1.2-2' }}</p>
+          </div>
+        </div>
+        <div class="chart-container" *ngIf="inventoryData">
+          <canvas id="inventoryChart"></canvas>
+        </div>
+        <div class="data-table-container" *ngIf="inventoryData?.items && inventoryData.items.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item Name</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Unit Cost</th>
+                <th>Total Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of inventoryData.items">
+                <td>{{ item.item_name || item.name }}</td>
+                <td>{{ item.sku }}</td>
+                <td>{{ item.quantity || 0 }}</td>
+                <td>₹{{ item.unit_cost || 0 | number:'1.2-2' }}</td>
+                <td>₹{{ item.total_value || 0 | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="inventoryData && (!inventoryData.items || inventoryData.items.length === 0)" class="empty-state">
+          <p>No inventory data available for the selected period.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accounting Reports -->
+  <div class="content-section" *ngIf="activeReport === 'accounting'">
+    <div class="report-form-card">
+      <h2 class="section-title">Accounting Report</h2>
+      <form [formGroup]="accountingReportForm" (ngSubmit)="generateAccountingReport()" class="report-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date From</label>
+            <input type="date" formControlName="date_from" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date To</label>
+            <input type="date" formControlName="date_to" class="form-input" />
+          </div>
+          <div class="form-group" *ngIf="isSuperAdmin()">
+            <label class="form-label">Location</label>
+            <select [(ngModel)]="selectedLocationId" [ngModelOptions]="{standalone: true}" class="form-input">
+              <option [ngValue]="null">All Locations</option>
+              <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <button type="submit" [disabled]="accountingReportForm.invalid || loading" class="btn-primary">
+              {{ loading ? 'Generating...' : 'Generate Report' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Loader -->
+    <div *ngIf="loading && !accountingData" class="report-loader">
+      <app-loader size="large" message="Generating accounting report..."></app-loader>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!loading && !accountingData && accountingReportForm.valid" class="empty-state">
+      <p>Click "Generate Report" to view profit & loss data for the selected period.</p>
+    </div>
+
+    <div *ngIf="accountingData" class="report-results">
+      <div class="results-header">
+        <h3 class="results-title">Profit & Loss Report</h3>
+        <div class="export-buttons">
+          <button (click)="exportReport('pdf')" class="btn-export">Export PDF</button>
+          <button (click)="exportReport('excel')" class="btn-export">Export Excel</button>
+        </div>
+      </div>
+      <div class="results-content">
+        <div class="chart-container" *ngIf="accountingData">
+          <canvas id="profitLossChart"></canvas>
+        </div>
+        <div class="summary-cards" *ngIf="accountingData">
+          <div class="summary-card revenue">
+            <h4>Revenue</h4>
+            <p class="amount">₹{{ accountingData.revenue || 0 | number:'1.2-2' }}</p>
+          </div>
+          <div class="summary-card cogs">
+            <h4>Cost of Goods Sold</h4>
+            <p class="amount">₹{{ accountingData.cost_of_goods_sold || 0 | number:'1.2-2' }}</p>
+          </div>
+          <div class="summary-card">
+            <h4>Gross Profit</h4>
+            <p class="amount">₹{{ accountingData.gross_profit || 0 | number:'1.2-2' }}</p>
+          </div>
+          <div class="summary-card expenses">
+            <h4>Expenses</h4>
+            <p class="amount">₹{{ accountingData.expenses || 0 | number:'1.2-2' }}</p>
+          </div>
+          <div class="summary-card profit">
+            <h4>Net Profit</h4>
+            <p class="amount">₹{{ accountingData.net_profit || 0 | number:'1.2-2' }}</p>
+          </div>
+          <div class="summary-card" *ngIf="accountingData.profit_margin !== undefined">
+            <h4>Profit Margin</h4>
+            <p class="amount">{{ accountingData.profit_margin || 0 | number:'1.2-2' }}%</p>
+          </div>
+        </div>
+        <div *ngIf="accountingData && (!accountingData.revenue && !accountingData.expenses)" class="empty-state">
+          <p>No accounting data available for the selected period.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,50 @@
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.category-pill {
+  padding: 0.55rem 1.35rem;
+  border: 1px solid var(--mc-border);
+  border-radius: 2rem;
+  background: var(--mc-bg-card);
+  font-family: var(--mc-font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--mc-charcoal);
+  cursor: pointer;
+  transition: background var(--mc-transition), border-color var(--mc-transition),
+    color var(--mc-transition), transform var(--mc-transition-fast), box-shadow var(--mc-transition);
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.category-pill:hover {
+  background: var(--mc-bg-warm);
+  border-color: var(--mc-accent-cta);
+  color: var(--mc-accent-cta);
+  transform: translateY(-1px);
+}
+
+.category-pill.active {
+  background: var(--mc-charcoal);
+  color: white;
+  border-color: var(--mc-charcoal);
+  box-shadow: var(--mc-shadow-md);
+  transform: translateY(0);
+}
+
+.category-pill:focus {
+  outline: none;
+  box-shadow: var(--mc-focus-ring);
+}
+
+.category-pill:focus:not(:focus-visible) {
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.category-pill.active:focus {
+  box-shadow: var(--mc-focus-ring);
+}

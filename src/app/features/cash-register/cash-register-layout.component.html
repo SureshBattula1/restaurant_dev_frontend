@@ -1,0 +1,20 @@
+<div class="cash-register-module">
+  <!-- Top Tabs -->
+  <div class="tabs-container">
+    <a
+      routerLink="/cash-register"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="tab-link">
+      Open Register
+    </a>
+    <a
+      routerLink="/cash-register/transactions"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="tab-link">
+      Transaction Management
+    </a>
+  </div>
+  <router-outlet></router-outlet>
+</div>

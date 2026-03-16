@@ -1,0 +1,22 @@
+<div class="menu-search">
+  <span class="search-icon" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  </span>
+  <input
+    type="search"
+    class="search-input"
+    [(ngModel)]="searchTerm"
+    (ngModelChange)="onInput()"
+    placeholder="Search menu..."
+    aria-label="Search menu items"
+  />
+  <button
+    type="button"
+    class="search-clear"
+    *ngIf="searchTerm"
+    (click)="clear()"
+    aria-label="Clear search"
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+</div>

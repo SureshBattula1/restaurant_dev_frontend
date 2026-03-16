@@ -1,0 +1,323 @@
+/* Attendance Container */
+.attendance-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.12);
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.page-title mat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #3f51b5;
+}
+
+/* Material Card */
+.attendance-card {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.attendance-card ::ng-deep .mat-mdc-tab-body-content {
+  padding: 24px;
+}
+
+/* Tab Content */
+.tab-content {
+  padding: 0;
+}
+
+/* Filter Section */
+.filter-section {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.location-filter {
+  min-width: 250px;
+}
+
+/* Form Styles */
+.attendance-form {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.inline-spinner {
+  display: inline-block;
+  margin-left: 8px;
+}
+
+/* Bulk Entry Styles */
+.filter-card {
+  margin-bottom: 24px;
+}
+
+.filter-card mat-card-header {
+  margin-bottom: 16px;
+}
+
+.filter-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.filter-field {
+  width: 100%;
+}
+
+.load-button {
+  height: 56px;
+  white-space: nowrap;
+}
+
+/* Bulk Actions */
+.bulk-actions {
+  margin-bottom: 24px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.action-buttons button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Bulk Table */
+.bulk-table-container {
+  margin-bottom: 24px;
+}
+
+.bulk-table-container mat-card-header {
+  margin-bottom: 16px;
+}
+
+.bulk-table-container mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.bulk-table {
+  width: 100%;
+  min-width: 1000px;
+}
+
+.bulk-table th {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.87);
+  background-color: #f5f5f5;
+}
+
+.bulk-table td {
+  padding: 12px 8px;
+}
+
+.status-field,
+.time-field,
+.notes-field {
+  width: 100%;
+  min-width: 120px;
+}
+
+.employee-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-number {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Empty State */
+.empty-state-card {
+  margin: 24px 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 64px !important;
+  width: 64px !important;
+  height: 64px !important;
+  color: rgba(0, 0, 0, 0.38);
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.87);
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+  margin: 0;
+}
+
+/* Save Actions */
+.save-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.save-button {
+  min-width: 200px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .attendance-container {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .load-button {
+    width: 100%;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
+
+/* Material Form Field Overrides */
+::ng-deep .attendance-form .mat-mdc-form-field {
+  width: 100%;
+}
+
+::ng-deep .bulk-table .mat-mdc-form-field {
+  width: 100%;
+}
+
+::ng-deep .bulk-table .mat-mdc-form-field-wrapper {
+  padding-bottom: 0;
+}
+
+::ng-deep .bulk-table .mat-mdc-text-field-wrapper {
+  margin-bottom: 0;
+}
+
+/* Status Chips */
+.status-present {
+  background-color: #4caf50;
+  color: white;
+}
+
+.status-absent {
+  background-color: #f44336;
+  color: white;
+}
+
+.status-late {
+  background-color: #ff9800;
+  color: white;
+}
+
+.status-half_day {
+  background-color: #2196f3;
+  color: white;
+}

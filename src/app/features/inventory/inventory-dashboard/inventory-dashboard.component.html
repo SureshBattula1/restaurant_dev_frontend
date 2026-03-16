@@ -1,0 +1,872 @@
+<div class="inventory-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Inventory Management</h1>
+    <div class="header-actions">
+      <!-- Super Admin: Branch selection filter -->
+      <div *ngIf="isSuperAdmin()" class="location-filter-header">
+        <label class="filter-label">Branch</label>
+        <select [(ngModel)]="selectedLocationId" (change)="onInventoryLocationChange()" class="form-select location-select-compact">
+          <option [ngValue]="undefined">All Branches</option>
+          <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <button
+      *ngFor="let tab of ['items', 'stock', 'menu-items', 'low-stock']"
+      (click)="switchTab(tab)"
+      [class.active]="activeTab === tab"
+      class="tab-btn"
+    >
+      {{ tab | titlecase }}
+    </button>
+  </div>
+
+  <!-- Items Tab -->
+  <div class="content-section" *ngIf="activeTab === 'items'">
+    <div class="section-header">
+      <h2 class="section-title">Raw Materials</h2>
+      <span *ngIf="isSuperAdmin() && getSelectedBranchName()" class="branch-context-hint">Stock for: {{ getSelectedBranchName() }}</span>
+      <button (click)="openItemModal()" class="btn-primary">+ Add Item</button>
+    </div>
+    <app-data-table
+      [config]="itemsTableConfig"
+      [data]="itemsTableData"
+      [pagination]="itemsTablePagination"
+      [loading]="itemsTableLoading"
+      [loadDataFn]="loadItemsTableData"
+      [realtimeUpdates$]="itemsRealtimeUpdates$">
+    </app-data-table>
+  </div>
+
+  <!-- Menu Items Tab -->
+  <div class="content-section" *ngIf="activeTab === 'menu-items'">
+    <div class="section-header">
+      <h2 class="section-title">Menu Items</h2>
+      <div class="section-actions">
+        <button (click)="openCategoryModal()" class="btn-secondary">+ Add Category</button>
+        <button (click)="openMenuItemModal()" class="btn-primary">+ Add Menu Item</button>
+      </div>
+    </div>
+    <app-data-table
+      [config]="menuItemsTableConfig"
+      [data]="menuItemsTableData"
+      [pagination]="menuItemsTablePagination"
+      [loading]="menuItemsTableLoading"
+      [loadDataFn]="loadMenuItemsTableData"
+      [realtimeUpdates$]="menuItemsRealtimeUpdates$">
+    </app-data-table>
+  </div>
+
+  <!-- Menu Item Modal -->
+  <div class="modal-overlay" *ngIf="showMenuItemModal" (click)="closeMenuItemModal()">
+    <div class="modal-content large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedMenuItem ? 'Edit' : 'Add' }} Menu Item</h3>
+        <button (click)="closeMenuItemModal()" class="modal-close">×</button>
+      </div>
+      
+      <form [formGroup]="menuItemForm" (ngSubmit)="saveMenuItem()" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" formControlName="name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">SKU *</label>
+            <input type="text" formControlName="sku" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Barcode</label>
+            <input type="text" formControlName="barcode" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select formControlName="category_id" class="form-select">
+              <option value="">Select Category</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Selling Price *</label>
+            <input type="number" formControlName="selling_price" class="form-input" step="0.01" min="0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tax Rate (%)</label>
+            <input type="number" formControlName="tax_rate" class="form-input" step="0.01" min="0" max="100" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status *</label>
+            <select formControlName="status" class="form-select">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <!-- Recipe selection removed: recipes feature disabled -->
+          <div class="form-group">
+            <label class="form-label">Branch Locations *</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Select Branches</mat-label>
+              <mat-select 
+                formControlName="location_ids" 
+                [multiple]="true"
+                [disabled]="!isSuperAdmin()">
+                <mat-option *ngFor="let location of locations" [value]="location.id">
+                  {{ location.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            <small class="form-hint" *ngIf="!isSuperAdmin()">
+              Your assigned branch location (auto-selected)
+            </small>
+            <small class="form-hint" *ngIf="isSuperAdmin()">
+              Select one or more branches where this menu item will be available
+            </small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea formControlName="description" class="form-textarea" rows="3"></textarea>
+        </div>
+
+        <!-- Image Upload Section (for menu card only - not shown in listing) -->
+        <div class="form-group">
+          <label class="form-label">Menu Card Image</label>
+          <div class="image-upload-area">
+            <div class="image-preview" *ngIf="menuItemImagePreviewUrl">
+              <img [src]="menuItemImagePreviewUrl" alt="Preview" />
+              <button type="button" class="btn-remove-image" (click)="clearMenuItemImage()" title="Remove image">×</button>
+            </div>
+            <div class="image-upload-placeholder" *ngIf="!menuItemImagePreviewUrl">
+              <input
+                type="file"
+                #menuItemImageInput
+                accept="image/*"
+                (change)="onMenuItemImageSelected($event)"
+                class="image-input-hidden"
+              />
+              <button type="button" class="btn-upload-image" (click)="menuItemImageInput.click()">
+                Choose Image
+              </button>
+              <small class="form-hint">Optional. Used for menu card display. Max 2MB.</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Variants Section -->
+        <div class="variants-section">
+          <div class="section-header">
+            <h4 class="section-title">Variants (Optional)</h4>
+            <button type="button" (click)="addVariant()" class="btn-add-variant">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Add Variant
+            </button>
+          </div>
+
+          <div class="variants-list" *ngIf="variantsFormArray.length > 0">
+            <div *ngFor="let variant of variantsFormArray.controls; let i = index" [formGroup]="$any(variant)" class="variant-item">
+              <div class="variant-fields">
+                <div class="form-group variant-field">
+                  <label class="form-label">Variant Name *</label>
+                  <input type="text" formControlName="name" class="form-input" placeholder="e.g., Full, Half, 100ml" />
+                </div>
+                <div class="form-group variant-field">
+                  <label class="form-label">Price *</label>
+                  <input type="number" formControlName="price" class="form-input" step="0.01" min="0" />
+                </div>
+                <div class="form-group variant-field">
+                  <label class="form-label">Display Order</label>
+                  <input type="number" formControlName="display_order" class="form-input" min="0" />
+                </div>
+                <div class="form-group variant-field checkbox-field">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="is_default" />
+                    <span>Default</span>
+                  </label>
+                </div>
+                <div class="form-group variant-field">
+                  <button type="button" (click)="removeVariant(i)" class="btn-remove-variant" title="Remove variant">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="variants-hint" *ngIf="variantsFormArray.length === 0">
+            Add variants to offer different sizes/portions (e.g., Full, Half, Single, 100ml, 500ml, 1L) with different prices.
+          </p>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeMenuItemModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="menuItemForm.invalid" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stock Tab -->
+  <div class="content-section" *ngIf="activeTab === 'stock'">
+    <div class="section-header">
+      <h2 class="section-title">Stock Management</h2>
+      <div class="action-buttons">
+        <button (click)="openStockInModal()" class="btn-primary">+ Stock In</button>
+        <button (click)="openStockOutModal()" class="btn-secondary">- Stock Out</button>
+        <button (click)="openStockTransferModal()" class="btn-secondary">↔ Transfer</button>
+        <button (click)="openStockAdjustModal()" class="btn-secondary">⚙ Adjust</button>
+      </div>
+    </div>
+    <p class="section-description">Manage stock levels: add stock, remove stock, transfer between locations, or adjust quantities.</p>
+
+    <!-- Recent Stock Transactions -->
+    <div class="stock-transactions-card">
+      <div class="stock-transactions-header">
+        <h3 class="stock-transactions-title">Recent Stock In Transactions</h3>
+        <button class="btn-secondary-compact" (click)="loadStockTransactions(1)" [disabled]="stockTransactionsLoading">
+          Refresh
+        </button>
+      </div>
+
+      <!-- Group by item -->
+      <div class="stock-transactions-groups" *ngIf="!stockTransactionsLoading && stockTransactions.length > 0">
+        <button
+          type="button"
+          class="group-chip"
+          [class.active]="!selectedStockTransactionsItemId"
+          (click)="selectedStockTransactionsItemId = null"
+        >
+          All ({{ stockTransactions.length }})
+        </button>
+        <button
+          type="button"
+          class="group-chip"
+          *ngFor="let group of getStockTransactionsGroupedByItem()"
+          [class.active]="selectedStockTransactionsItemId === group.item_id"
+          (click)="selectedStockTransactionsItemId = group.item_id"
+        >
+          {{ group.name }}
+          <span class="group-chip-meta">{{ group.count }} tx • {{ group.total_qty | number:'1.2-2' }}</span>
+        </button>
+      </div>
+
+      <div *ngIf="stockTransactionsLoading" class="stock-transactions-loading">
+        <span>Loading transactions...</span>
+      </div>
+
+      <div *ngIf="!stockTransactionsLoading && stockTransactions.length === 0" class="empty-state small">
+        <p>No stock in transactions found.</p>
+      </div>
+
+      <div *ngIf="!stockTransactionsLoading && stockTransactions.length > 0" class="stock-transactions-table-wrapper">
+        <table class="stock-transactions-table">
+          <thead>
+            <tr>
+              <th>Date &amp; Time</th>
+              <th>Item</th>
+              <th>Type</th>
+              <th>Qty</th>
+              <th>Cost</th>
+              <th>Location</th>
+              <th>User</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of getVisibleStockTransactions()">
+              <td>{{ tx.created_at | date:'short' }}</td>
+              <td>
+                <div class="tx-item-name">
+                  {{ tx.item?.name || 'N/A' }}
+                </div>
+                <div class="tx-item-sku" *ngIf="tx.item?.sku">
+                  SKU: {{ tx.item.sku }}
+                </div>
+              </td>
+              <td>{{ (tx.transaction_type || 'in') | titlecase }}</td>
+              <td>{{ tx.quantity }}</td>
+              <td>{{ tx.unit_cost | number:'1.2-2' }}</td>
+              <td>{{ tx.location?.name || 'N/A' }}</td>
+              <td>{{ tx.user?.name || 'N/A' }}</td>
+              <td>
+                <span class="tx-status" [class.tx-status-reverted]="tx.reverted_at">
+                  {{ tx.reverted_at ? 'Reverted' : 'Active' }}
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="btn-secondary-compact tx-action-btn"
+                  (click)="openStockTransactionEdit(tx)"
+                  [disabled]="tx.reverted_at"
+                  title="Edit this transaction"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary-compact tx-action-btn"
+                  (click)="revertStockTransaction(tx)"
+                  [disabled]="tx.reverted_at"
+                  title="Revert this transaction"
+                >
+                  Revert
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Simple pagination -->
+        <div class="stock-transactions-pagination" *ngIf="stockTransactionsLastPage > 1">
+          <button
+            class="pagination-btn"
+            (click)="goToStockTransactionsPage(stockTransactionsPage - 1)"
+            [disabled]="stockTransactionsPage === 1"
+          >
+            ‹
+          </button>
+          <span class="pagination-info">
+            Page {{ stockTransactionsPage }} of {{ stockTransactionsLastPage }}
+          </span>
+          <button
+            class="pagination-btn"
+            (click)="goToStockTransactionsPage(stockTransactionsPage + 1)"
+            [disabled]="stockTransactionsPage === stockTransactionsLastPage"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Transaction Edit Modal -->
+  <div class="modal-overlay" *ngIf="showStockTransactionModal" (click)="closeStockTransactionEdit()">
+    <div class="modal-content medium" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Stock Transaction</h3>
+        <button (click)="closeStockTransactionEdit()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="stockTransactionForm" (ngSubmit)="saveStockTransactionEdit()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Item</label>
+          <div class="form-static">
+            {{ editingStockTransaction?.item?.name || 'N/A' }}
+            <span class="form-static-sub" *ngIf="editingStockTransaction?.item?.sku">
+              SKU: {{ editingStockTransaction?.item?.sku }}
+            </span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <div class="form-static">
+            {{ editingStockTransaction?.location?.name || 'N/A' }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">User</label>
+          <div class="form-static">
+            {{ editingStockTransaction?.user?.name || 'N/A' }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Transaction Type</label>
+          <div class="form-static">
+            {{ editingStockTransaction?.transaction_type | titlecase }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity *</label>
+          <input
+            type="number"
+            formControlName="quantity"
+            class="form-input"
+            step="0.01"
+            min="0.01"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit Cost</label>
+          <input
+            type="number"
+            formControlName="unit_cost"
+            class="form-input"
+            step="0.01"
+            min="0"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea formControlName="notes" class="form-textarea" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="closeStockTransactionEdit()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="stockTransactionForm.invalid" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recipes tab removed: recipes feature disabled -->
+
+  <!-- Low Stock Tab -->
+  <div class="content-section" *ngIf="activeTab === 'low-stock'">
+    <div class="section-header">
+      <h2 class="section-title">Low Stock Alerts</h2>
+      <span *ngIf="isSuperAdmin() && getSelectedBranchName()" class="branch-context-hint">Alerts for: {{ getSelectedBranchName() }}</span>
+    </div>
+    <div *ngIf="lowStockItems.length > 0" class="low-stock-list">
+      <div *ngFor="let item of lowStockItems" class="low-stock-item">
+        <div class="item-info">
+          <h3>{{ item.name }}</h3>
+          <p>SKU: {{ item.sku }}</p>
+          <p>Current Stock: {{ (item.current_quantity ?? item.current_stock) || 0 }} {{ item.unit }}</p>
+          <p>Threshold: {{ item.low_stock_threshold }} {{ item.unit }}</p>
+        </div>
+        <button (click)="openStockInModal()" class="btn-primary">Add Stock</button>
+      </div>
+    </div>
+    <div *ngIf="lowStockItems.length === 0" class="empty-state">
+      <p>All items are well stocked!</p>
+    </div>
+  </div>
+
+  <!-- Stock In Modal -->
+  <div class="modal-overlay" *ngIf="showStockInModal" (click)="closeStockInModal()">
+    <div class="modal-content stock-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header-compact">
+        <h3 class="modal-title-compact">Stock In</h3>
+        <button (click)="closeStockInModal()" class="modal-close-compact" [disabled]="savingStockIn">×</button>
+      </div>
+      <form [formGroup]="stockInForm" (ngSubmit)="saveStockIn()" class="modal-body-compact">
+        <div class="form-group-compact">
+          <label class="form-label-compact">Location *</label>
+          <!-- Super Admin: Show location selector -->
+          <select *ngIf="isSuperAdmin()" formControlName="location_id" class="form-select-compact" [disabled]="savingStockIn">
+            <option value="">Select Location</option>
+            <option *ngFor="let location of locations" [value]="location.id">{{ location.name }}</option>
+          </select>
+          <!-- Regular User: Show read-only location info -->
+          <div *ngIf="!isSuperAdmin()" class="form-static-compact">
+            {{ currentUser?.location?.name || 'Current Location' }}
+            <input type="hidden" formControlName="location_id" [value]="currentUser?.location_id" />
+          </div>
+        </div>
+
+        <div class="form-group-compact">
+          <div class="items-header-row">
+            <label class="form-label-compact">Items</label>
+            <button
+              type="button"
+              (click)="addStockInItem()"
+              class="btn-add-item-inline"
+              [disabled]="savingStockIn"
+            >
+              +
+            </button>
+          </div>
+          <div class="stock-items-container">
+            <div *ngFor="let item of stockInItems.controls; let i = index" [formGroup]="$any(item)" class="stock-item-row-compact">
+              <div class="form-group-compact autocomplete-group-compact">
+                <label class="form-label-compact">Item *</label>
+                <div class="autocomplete-wrapper-compact">
+                  <input 
+                    type="text" 
+                    [value]="getItemName(item.get('item_id')?.value) || ''"
+                    class="form-input-compact autocomplete-input-compact"
+                    placeholder="Search item..."
+                    (input)="filterItemsForStock($any($event.target).value, i, 'in')"
+                    (focus)="filterItemsForStock($any($event.target).value || '', i, 'in')"
+                    (blur)="closeAutocomplete(i, 'in')"
+                    [disabled]="savingStockIn"
+                  />
+                  <div *ngIf="stockInAutocompleteStates[i]?.showDropdown && stockInAutocompleteStates[i]?.filteredItems && stockInAutocompleteStates[i]!.filteredItems.length > 0" 
+                       class="autocomplete-dropdown-compact">
+                    <div 
+                      *ngFor="let filteredItem of stockInAutocompleteStates[i]!.filteredItems"
+                      (mousedown)="selectItemForStock(filteredItem.id, i, 'in')"
+                      class="autocomplete-item-compact"
+                    >
+                      <span class="autocomplete-item-name-compact">{{ filteredItem.name }}</span>
+                      <span class="autocomplete-item-sku-compact" *ngIf="filteredItem.sku">{{ filteredItem.sku }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group-compact">
+                <label class="form-label-compact">Qty *</label>
+                <input
+                  type="number"
+                  formControlName="quantity"
+                  class="form-input-compact"
+                  step="0.01"
+                  min="0.01"
+                  [disabled]="savingStockIn"
+                />
+                <div class="stock-summary-line" *ngIf="getStockInPreviousQty(i) !== null">
+                  <span class="stock-summary-text">
+                    {{ getStockInPreviousQty(i) }} + {{ $any(item.get('quantity'))?.value || 0 }} = {{ getStockInTotalQty(i) }}
+                  </span>
+                </div>
+              </div>
+              <div class="form-group-compact">
+                <label class="form-label-compact">Cost</label>
+                <input
+                  type="number"
+                  formControlName="unit_cost"
+                  class="form-input-compact"
+                  step="0.01"
+                  min="0"
+                  [disabled]="savingStockIn"
+                />
+                <div class="stock-summary-line" *ngIf="stockInPreviousCost[i] !== undefined">
+                  <span class="stock-summary-text">
+                    Last: {{ stockInPreviousCost[i] | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+              <button type="button" (click)="removeStockInItem(i)" class="btn-remove-compact" [disabled]="savingStockIn" title="Remove">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group-compact">
+          <label class="form-label-compact">Notes</label>
+          <textarea formControlName="notes" class="form-textarea-compact" rows="2" [disabled]="savingStockIn"></textarea>
+        </div>
+
+        <div class="modal-footer-compact">
+          <button type="button" (click)="closeStockInModal()" class="btn-secondary-compact" [disabled]="savingStockIn">Cancel</button>
+          <button
+            type="submit"
+            [disabled]="!stockInForm.get('location_id')?.valid || !hasValidStockInItems() || savingStockIn"
+            class="btn-primary-compact"
+          >
+            <span *ngIf="!savingStockIn">Save</span>
+            <span *ngIf="savingStockIn" class="saving-indicator">
+              <svg class="spinner-xs" fill="none" viewBox="0 0 24 24">
+                <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle>
+                <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stock Out Modal -->
+  <div class="modal-overlay" *ngIf="showStockOutModal" (click)="closeStockOutModal()">
+    <div class="modal-content stock-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header-compact">
+        <h3 class="modal-title-compact">Stock Out</h3>
+        <button (click)="closeStockOutModal()" class="modal-close-compact" [disabled]="savingStockOut">×</button>
+      </div>
+      <form [formGroup]="stockOutForm" (ngSubmit)="saveStockOut()" class="modal-body-compact">
+        <div class="form-group-compact">
+          <label class="form-label-compact">Location *</label>
+          <!-- Super Admin: Show location selector -->
+          <select *ngIf="isSuperAdmin()" formControlName="location_id" class="form-select-compact" [disabled]="savingStockOut">
+            <option value="">Select Location</option>
+            <option *ngFor="let location of locations" [value]="location.id">{{ location.name }}</option>
+          </select>
+          <!-- Regular User: Show read-only location info -->
+          <div *ngIf="!isSuperAdmin()" class="form-static-compact">
+            {{ currentUser?.location?.name || 'Current Location' }}
+            <input type="hidden" formControlName="location_id" [value]="currentUser?.location_id" />
+          </div>
+        </div>
+
+        <div class="form-group-compact">
+          <div class="items-header-row">
+            <label class="form-label-compact">Items</label>
+            <button
+              type="button"
+              (click)="addStockOutItem()"
+              class="btn-add-item-inline"
+              [disabled]="savingStockOut"
+            >
+              +
+            </button>
+          </div>
+          <div class="stock-items-container">
+            <div *ngFor="let item of stockOutItems.controls; let i = index" [formGroup]="$any(item)" class="stock-item-row-compact">
+              <div class="form-group-compact autocomplete-group-compact">
+                <label class="form-label-compact">Item *</label>
+                <div class="autocomplete-wrapper-compact">
+                  <input 
+                    type="text" 
+                    [value]="getItemName(item.get('item_id')?.value) || ''"
+                    class="form-input-compact autocomplete-input-compact"
+                    placeholder="Search item..."
+                    (input)="filterItemsForStock($any($event.target).value, i, 'out')"
+                    (focus)="filterItemsForStock($any($event.target).value || '', i, 'out')"
+                    (blur)="closeAutocomplete(i, 'out')"
+                    [disabled]="savingStockOut"
+                  />
+                  <div *ngIf="stockOutAutocompleteStates[i]?.showDropdown && stockOutAutocompleteStates[i]?.filteredItems && stockOutAutocompleteStates[i]!.filteredItems.length > 0" 
+                       class="autocomplete-dropdown-compact">
+                    <div 
+                      *ngFor="let filteredItem of stockOutAutocompleteStates[i]!.filteredItems"
+                      (mousedown)="selectItemForStock(filteredItem.id, i, 'out')"
+                      class="autocomplete-item-compact"
+                    >
+                      <span class="autocomplete-item-name-compact">{{ filteredItem.name }}</span>
+                      <span class="autocomplete-item-sku-compact" *ngIf="filteredItem.sku">{{ filteredItem.sku }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group-compact">
+                <label class="form-label-compact">Qty *</label>
+                <input
+                  type="number"
+                  formControlName="quantity"
+                  class="form-input-compact"
+                  step="0.01"
+                  min="0.01"
+                  [disabled]="savingStockOut"
+                />
+                <div class="stock-summary-line" *ngIf="getStockOutPreviousQty(i) !== null">
+                  <span class="stock-summary-text">
+                    Available: {{ getStockOutPreviousQty(i) }} • Out: {{ $any(item.get('quantity'))?.value || 0 }}
+                  </span>
+                </div>
+              </div>
+              <button type="button" (click)="removeStockOutItem(i)" class="btn-remove-compact" [disabled]="savingStockOut" title="Remove">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group-compact">
+          <label class="form-label-compact">Notes</label>
+          <textarea formControlName="notes" class="form-textarea-compact" rows="2" [disabled]="savingStockOut"></textarea>
+        </div>
+
+        <div class="modal-footer-compact">
+          <button type="button" (click)="closeStockOutModal()" class="btn-secondary-compact" [disabled]="savingStockOut">Cancel</button>
+          <button
+            type="submit"
+            [disabled]="!stockOutForm.get('location_id')?.valid || !hasValidStockInItems() || savingStockOut"
+            class="btn-primary-compact"
+          >
+            <span *ngIf="!savingStockOut">Save</span>
+            <span *ngIf="savingStockOut" class="saving-indicator">
+              <svg class="spinner-xs" fill="none" viewBox="0 0 24 24">
+                <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle>
+                <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stock Transfer Modal -->
+  <div class="modal-overlay" *ngIf="showStockTransferModal" (click)="closeStockTransferModal()">
+    <div class="modal-content stock-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header-compact">
+        <h3 class="modal-title-compact">Transfer Stock</h3>
+        <button (click)="closeStockTransferModal()" class="modal-close-compact" [disabled]="savingStockTransfer">×</button>
+      </div>
+      <form [formGroup]="stockTransferForm" (ngSubmit)="saveStockTransfer()" class="modal-body-compact">
+        <div class="form-group-compact">
+          <label class="form-label-compact">Item *</label>
+          <div class="autocomplete-wrapper-compact">
+            <input 
+              type="text" 
+              [value]="getItemName(stockTransferForm.get('item_id')?.value) || ''"
+              class="form-input-compact autocomplete-input-compact"
+              placeholder="Search item..."
+              (input)="filterItemsForStockTransfer($any($event.target).value)"
+              (focus)="filterItemsForStockTransfer($any($event.target).value || '')"
+              (blur)="closeAutocompleteTransfer()"
+              [disabled]="savingStockTransfer"
+            />
+            <div *ngIf="transferAutocompleteState?.showDropdown && transferAutocompleteState?.filteredItems && transferAutocompleteState.filteredItems.length > 0" 
+                 class="autocomplete-dropdown-compact">
+              <div 
+                *ngFor="let filteredItem of transferAutocompleteState.filteredItems"
+                (mousedown)="selectItemForStockTransfer(filteredItem.id)"
+                class="autocomplete-item-compact"
+              >
+                <span class="autocomplete-item-name-compact">{{ filteredItem.name }}</span>
+                <span class="autocomplete-item-sku-compact" *ngIf="filteredItem.sku">{{ filteredItem.sku }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group-compact">
+          <label class="form-label-compact">From Location *</label>
+          <!-- Super Admin: Show location selector -->
+          <select *ngIf="isSuperAdmin()" formControlName="from_location_id" class="form-select-compact" [disabled]="savingStockTransfer" (change)="onStockTransferFieldChange()">
+            <option value="">Select Location</option>
+            <option *ngFor="let location of locations" [value]="location.id">{{ location.name }}</option>
+          </select>
+          <!-- Regular User: Show read-only location info -->
+          <div *ngIf="!isSuperAdmin()" class="form-static-compact">
+            {{ currentUser?.location?.name || 'Current Location' }}
+            <input type="hidden" formControlName="from_location_id" [value]="currentUser?.location_id" />
+          </div>
+          <div class="stock-summary-line" *ngIf="transferPreviousQty !== null">
+            <span class="stock-summary-text">
+              Available at From: {{ transferPreviousQty | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+        <div class="form-group-compact">
+          <label class="form-label-compact">To Location *</label>
+          <select formControlName="to_location_id" class="form-select-compact" [disabled]="savingStockTransfer">
+            <option value="">Select Location</option>
+            <option *ngFor="let location of locations" [value]="location.id">{{ location.name }}</option>
+          </select>
+        </div>
+        <div class="form-group-compact">
+          <label class="form-label-compact">Quantity *</label>
+          <input
+            type="number"
+            formControlName="quantity"
+            class="form-input-compact"
+            step="0.01"
+            min="0.01"
+            [disabled]="savingStockTransfer"
+          />
+        </div>
+        <div class="form-group-compact">
+          <label class="form-label-compact">Reason</label>
+          <textarea formControlName="reason" class="form-textarea-compact" rows="2" [disabled]="savingStockTransfer"></textarea>
+        </div>
+        <div class="modal-footer-compact">
+          <button type="button" (click)="closeStockTransferModal()" class="btn-secondary-compact" [disabled]="savingStockTransfer">Cancel</button>
+          <button
+            type="submit"
+            [disabled]="stockTransferForm.invalid || savingStockTransfer"
+            class="btn-primary-compact"
+          >
+            <span *ngIf="!savingStockTransfer">Transfer</span>
+            <span *ngIf="savingStockTransfer" class="saving-indicator">
+              <svg class="spinner-xs" fill="none" viewBox="0 0 24 24">
+                <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle>
+                <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stock Adjust Modal -->
+  <div class="modal-overlay" *ngIf="showStockAdjustModal" (click)="closeStockAdjustModal()">
+    <div class="modal-content stock-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header-compact">
+        <h3 class="modal-title-compact">Adjust Stock</h3>
+        <button (click)="closeStockAdjustModal()" class="modal-close-compact" [disabled]="savingStockAdjust">×</button>
+      </div>
+      <form [formGroup]="stockAdjustForm" (ngSubmit)="saveStockAdjust()" class="modal-body-compact">
+        <div class="form-group-compact">
+          <label class="form-label-compact">Item *</label>
+          <div class="autocomplete-wrapper-compact">
+            <input 
+              type="text" 
+              [value]="getItemName(stockAdjustForm.get('item_id')?.value) || ''"
+              class="form-input-compact autocomplete-input-compact"
+              placeholder="Search item..."
+              (input)="filterItemsForStockAdjust($any($event.target).value)"
+              (focus)="filterItemsForStockAdjust($any($event.target).value || '')"
+              (blur)="closeAutocompleteAdjust()"
+              [disabled]="savingStockAdjust"
+            />
+            <div *ngIf="adjustAutocompleteState?.showDropdown && adjustAutocompleteState?.filteredItems && adjustAutocompleteState.filteredItems.length > 0" 
+                 class="autocomplete-dropdown-compact">
+              <div 
+                *ngFor="let filteredItem of adjustAutocompleteState.filteredItems"
+                (mousedown)="selectItemForStockAdjust(filteredItem.id)"
+                class="autocomplete-item-compact"
+              >
+                <span class="autocomplete-item-name-compact">{{ filteredItem.name }}</span>
+                <span class="autocomplete-item-sku-compact" *ngIf="filteredItem.sku">{{ filteredItem.sku }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="stock-summary-line" *ngIf="adjustPreviousQty !== null">
+            <span class="stock-summary-text">
+              Current Stock: {{ adjustPreviousQty | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+        <div class="form-group-compact">
+          <label class="form-label-compact">New Quantity *</label>
+          <input
+            type="number"
+            formControlName="quantity"
+            class="form-input-compact"
+            step="0.01"
+            [disabled]="savingStockAdjust"
+          />
+        </div>
+        <div class="form-group-compact">
+          <label class="form-label-compact">Reason/Notes *</label>
+          <textarea formControlName="notes" class="form-textarea-compact" rows="3" placeholder="Explain why you're adjusting the stock..." [disabled]="savingStockAdjust"></textarea>
+        </div>
+        <div class="modal-footer-compact">
+          <button type="button" (click)="closeStockAdjustModal()" class="btn-secondary-compact" [disabled]="savingStockAdjust">Cancel</button>
+          <button type="submit" [disabled]="stockAdjustForm.invalid || savingStockAdjust" class="btn-primary-compact">
+            <span *ngIf="!savingStockAdjust">Adjust</span>
+            <span *ngIf="savingStockAdjust" class="saving-indicator">
+              <svg class="spinner-xs" fill="none" viewBox="0 0 24 24">
+                <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle>
+                <path class="spinner-path" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Category Modal -->
+  <div class="modal-overlay" *ngIf="showCategoryModal" (click)="closeCategoryModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Category</h3>
+        <button (click)="closeCategoryModal()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Category Name *</label>
+          <input type="text" formControlName="name" class="form-input" placeholder="e.g., Appetizers, Main Course" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug (optional)</label>
+          <input type="text" formControlName="slug" class="form-input" placeholder="Auto-generated from name if empty" />
+          <small class="form-hint">URL-friendly identifier. Leave empty to auto-generate.</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea formControlName="description" class="form-textarea" rows="3" placeholder="Optional description"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="closeCategoryModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="categoryForm.invalid" class="btn-primary">Create Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

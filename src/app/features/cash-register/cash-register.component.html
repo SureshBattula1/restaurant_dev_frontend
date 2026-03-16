@@ -1,0 +1,161 @@
+<div class="cash-register-container">
+  <div class="page-header">
+    <h1 class="page-title">Cash Register</h1>
+    <div class="header-actions">
+      <button *ngIf="!currentRegister" (click)="showOpenModal = true" class="btn-primary">
+        Open Register
+      </button>
+      <button *ngIf="currentRegister" (click)="showCloseModal = true" class="btn-danger">
+        Close Register
+      </button>
+      <button *ngIf="currentRegister" (click)="showTransactionModal = true" class="btn-secondary">
+        Add Transaction
+      </button>
+    </div>
+  </div>
+
+  <!-- Current Register Status -->
+  <div *ngIf="currentRegister" class="register-status">
+    <div class="status-card">
+      <h3>Register Status</h3>
+      <div class="status-grid">
+        <div>
+          <label>Opening Balance:</label>
+          <span>₹{{ currentRegister.opening_balance | number:'1.2-2' }}</span>
+        </div>
+        <div>
+          <label>Total In:</label>
+          <span class="text-green-600">₹{{ getTotalIn() | number:'1.2-2' }}</span>
+        </div>
+        <div>
+          <label>Total Out:</label>
+          <span class="text-red-600">₹{{ getTotalOut() | number:'1.2-2' }}</span>
+        </div>
+        <div>
+          <label>Expected Balance:</label>
+          <span class="font-bold">₹{{ getExpectedBalance() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="transactions-section">
+      <h3>Transactions</h3>
+      <div class="transactions-list">
+        <div *ngFor="let transaction of transactions" class="transaction-item">
+          <div class="transaction-type" [class.in]="transaction.transaction_type === 'in'" [class.out]="transaction.transaction_type === 'out'">
+            {{ transaction.transaction_type === 'in' ? '+' : '-' }}
+          </div>
+          <div class="transaction-details">
+            <div class="transaction-amount">₹{{ transaction.amount | number:'1.2-2' }}</div>
+            <div class="transaction-notes">{{ transaction.notes || 'No notes' }}</div>
+            <div class="transaction-reference" *ngIf="getReferenceLabel(transaction)">{{ getReferenceLabel(transaction) }}</div>
+            <div class="transaction-time">{{ transaction.created_at | date:'short' }}</div>
+          </div>
+        </div>
+        <div *ngIf="transactions.length === 0" class="empty-state">
+          No transactions yet
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open Register Modal -->
+  <div class="modal-overlay" *ngIf="showOpenModal" (click)="showOpenModal = false">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Open Cash Register</h3>
+        <button (click)="showOpenModal = false" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="openRegisterForm" (ngSubmit)="openRegister()">
+        <div class="form-group">
+          <label>Opening Balance *</label>
+          <input type="number" formControlName="opening_balance" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea formControlName="notes" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="showOpenModal = false" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="openRegisterForm.invalid" class="btn-primary">Open Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Close Register Modal -->
+  <div class="modal-overlay" *ngIf="showCloseModal" (click)="showCloseModal = false">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Close Cash Register</h3>
+        <button (click)="showCloseModal = false" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="closeRegisterForm" (ngSubmit)="closeRegister()">
+        <div class="form-group">
+          <label>Expected Balance:</label>
+          <span class="expected-balance">₹{{ getExpectedBalance() | number:'1.2-2' }}</span>
+        </div>
+        <div class="form-group">
+          <label>Closing Balance *</label>
+          <input type="number" formControlName="closing_balance" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea formControlName="notes" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="showCloseModal = false" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="closeRegisterForm.invalid" class="btn-danger">Close Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Transaction Modal -->
+  <div class="modal-overlay" *ngIf="showTransactionModal" (click)="showTransactionModal = false">
+    <div class="modal-content modal-transaction" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Add Transaction</h3>
+        <button (click)="showTransactionModal = false" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="transactionForm" (ngSubmit)="addTransaction()" class="transaction-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="tx-type">Type *</label>
+            <select id="tx-type" formControlName="transaction_type" class="form-control">
+              <option value="in">Cash In</option>
+              <option value="out">Cash Out</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tx-amount">Amount *</label>
+            <input id="tx-amount" type="number" formControlName="amount" class="form-control" step="0.01" min="0.01" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tx-category">Category</label>
+            <select id="tx-category" formControlName="category" class="form-control">
+              <option value="">-- None --</option>
+              <option value="petty_cash">Petty cash</option>
+              <option value="bank_deposit">Bank deposit</option>
+              <option value="expense_reimbursement">Expense reimbursement</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tx-notes">Notes</label>
+            <textarea id="tx-notes" formControlName="notes" class="form-control form-control-textarea" rows="3" placeholder="Optional notes"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="showTransactionModal = false" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="transactionForm.invalid" class="btn-primary">Add Transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+

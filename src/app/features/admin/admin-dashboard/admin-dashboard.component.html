@@ -1,0 +1,731 @@
+<div class="admin-container">
+  <!-- Loader Overlay -->
+  <app-loader *ngIf="dashboardLoading" size="large" [overlay]="true" message="Loading dashboard..."></app-loader>
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>dashboard</mat-icon> Admin Dashboard
+    </h1>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" *ngIf="isSuperAdmin()" class="location-select">
+        <mat-label>Location</mat-label>
+        <mat-select [(ngModel)]="selectedLocationId" (selectionChange)="onLocationChange()">
+          <mat-option [value]="undefined">All Locations</mat-option>
+          <mat-option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <mat-tab-group [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)" class="tabs-container">
+    <mat-tab label="Dashboard"></mat-tab>
+    <mat-tab label="Users"></mat-tab>
+    <mat-tab label="Roles"></mat-tab>
+    <mat-tab label="Locations"></mat-tab>
+    <mat-tab label="Permissions"></mat-tab>
+  </mat-tab-group>
+
+  <!-- Dashboard Tab -->
+  <div class="content-section" *ngIf="activeTab === 'dashboard'">
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-blue">attach_money</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Today's Sales</p>
+            <p class="stat-value">₹{{ (dashboardData?.today_sales || 0) | number:'1.2-2' }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-green">receipt</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Today's Orders</p>
+            <p class="stat-value">{{ dashboardData?.today_orders || 0 }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-orange">schedule</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Pending Kitchen Orders</p>
+            <p class="stat-value">{{ dashboardData?.pending_kitchen_orders || 0 }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-red">warning</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Low Stock Items</p>
+            <p class="stat-value">{{ dashboardData?.low_stock_items || 0 }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-purple">people</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Total Users</p>
+            <p class="stat-value">{{ dashboardData?.total_users || 0 }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-indigo">location_on</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Locations</p>
+            <p class="stat-value">{{ locations.length }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-teal">groups</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Employees</p>
+            <p class="stat-value">{{ dashboardData?.employees?.total || 0 }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon class="stat-icon-cyan">check_circle</mat-icon>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label">Today Present</p>
+            <p class="stat-value">{{ dashboardData?.attendance?.today_present || 0 }}</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Branch Breakdown (Super Admin Only) -->
+    <div class="branch-breakdown" *ngIf="isSuperAdmin() && dashboardData?.branch_breakdown && dashboardData.branch_breakdown.length > 0 && !selectedLocationId">
+      <h3 class="section-title">Branch Performance</h3>
+      <div class="branch-grid">
+        <div *ngFor="let branch of dashboardData.branch_breakdown" class="branch-card">
+          <h4 class="branch-name">{{ branch.location_name }}</h4>
+          <div class="branch-stats">
+            <div class="branch-stat">
+              <span class="branch-stat-label">Sales</span>
+              <span class="branch-stat-value">₹{{ branch.today_sales | number:'1.2-2' }}</span>
+            </div>
+            <div class="branch-stat">
+              <span class="branch-stat-label">Orders</span>
+              <span class="branch-stat-value">{{ branch.today_orders }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low Stock Items List -->
+    <div class="low-stock-section" *ngIf="dashboardData?.low_stock_items_list && dashboardData.low_stock_items_list.length > 0">
+      <h3 class="section-title">Low Stock Items</h3>
+      <div class="low-stock-grid">
+        <div *ngFor="let item of dashboardData.low_stock_items_list" class="low-stock-card">
+          <div class="low-stock-header">
+            <h4 class="low-stock-name">{{ item.name }}</h4>
+            <span class="low-stock-badge">Low Stock</span>
+          </div>
+          <div class="low-stock-info">
+            <p class="low-stock-quantity">
+              Current: <strong>{{ item.current_quantity }} {{ item.unit }}</strong>
+            </p>
+            <p class="low-stock-threshold">
+              Threshold: {{ item.threshold }} {{ item.unit }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users Tab -->
+  <div class="content-section" *ngIf="activeTab === 'users'">
+    <div class="section-header">
+      <h2 class="section-title">Users</h2>
+      <button (click)="openUserModal()" class="btn-primary">+ Add User</button>
+    </div>
+    
+    <!-- Location Filter for Super Admin -->
+    <div class="location-filter-section" *ngIf="isSuperAdmin()">
+      <label>Filter by Location:</label>
+      <select [(ngModel)]="selectedLocationId" (change)="onLocationChange()" class="location-select">
+        <option [ngValue]="undefined">All Locations</option>
+        <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+      </select>
+    </div>
+
+    <app-data-table
+      [config]="usersTableConfig"
+      [data]="usersTableData"
+      [pagination]="usersTablePagination"
+      [loading]="usersTableLoading"
+      [loadDataFn]="loadUsersTableData"
+      [enableRealtime]="true"
+      [realtimeUpdates$]="usersRealtimeUpdates$"
+      (rowAction)="handleUserAction($event)">
+    </app-data-table>
+  </div>
+
+  <!-- Roles Tab -->
+  <div class="content-section" *ngIf="activeTab === 'roles'">
+    <div class="section-header">
+      <h2 class="section-title">Roles</h2>
+      <button mat-raised-button color="primary" (click)="openRoleModal()">
+        <mat-icon>add</mat-icon> Add Role
+      </button>
+    </div>
+    <div class="cards-grid">
+      <mat-card *ngFor="let role of roles" class="role-card">
+        <mat-card-header>
+          <mat-card-title>{{ role.name }}</mat-card-title>
+          <mat-card-subtitle>{{ role.slug }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="role-description" *ngIf="role.description">{{ role.description }}</p>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-button color="primary" (click)="openRoleModal(role)">
+            <mat-icon>edit</mat-icon> Edit
+          </button>
+          <button mat-button color="accent" (click)="openRolePermissionsModal(role)">
+            <mat-icon>security</mat-icon> Manage Permissions
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Permissions Tab -->
+  <div class="content-section" *ngIf="activeTab === 'permissions'">
+    <div class="section-header">
+      <h2 class="section-title">Permissions Management</h2>
+      <button mat-raised-button color="primary" (click)="openPermissionModal()" *ngIf="isSuperAdmin() || hasAdminRole()">
+        <mat-icon>add_circle</mat-icon> Create Permission
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="permissionsLoading" class="loading-state">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading permissions...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!permissionsLoading && getPermissionModules().length === 0" class="empty-state">
+      <mat-icon class="empty-icon">shield_lock</mat-icon>
+      <h3>No Permissions Found</h3>
+      <p>Get started by creating your first permission.</p>
+      <button mat-raised-button color="primary" (click)="openPermissionModal()" *ngIf="isSuperAdmin() || hasAdminRole()">
+        <mat-icon>add_circle</mat-icon> Create Permission
+      </button>
+    </div>
+
+    <!-- Permissions by Module -->
+    <div *ngIf="!permissionsLoading && getPermissionModules().length > 0">
+      <div *ngFor="let module of getPermissionModules()" class="permission-module">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>folder</mat-icon> {{ module }}
+              <mat-chip>{{ groupedPermissions[module].length }}</mat-chip>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="permissions-grid">
+              <mat-card *ngFor="let permission of groupedPermissions[module]" class="permission-card">
+                <mat-card-content>
+                  <div class="permission-info">
+                    <div class="permission-header">
+                      <h4 class="permission-name">{{ permission.name }}</h4>
+                      <div class="permission-actions" *ngIf="isSuperAdmin() || hasAdminRole()">
+                        <button mat-icon-button (click)="openPermissionModal(permission)" matTooltip="Edit Permission">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    <p class="permission-slug">
+                      <mat-icon>code</mat-icon> {{ permission.slug }}
+                    </p>
+                    <p class="permission-description" *ngIf="permission.description">
+                      {{ permission.description }}
+                    </p>
+                    <p class="permission-description text-muted" *ngIf="!permission.description">
+                      <em>No description provided</em>
+                    </p>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Locations Tab -->
+  <div class="content-section" *ngIf="activeTab === 'locations'">
+    <div class="section-header">
+      <h2 class="section-title">Locations</h2>
+      <button mat-raised-button color="primary" (click)="openLocationModal()">
+        <mat-icon>add</mat-icon> Add Location
+      </button>
+    </div>
+    <div class="cards-grid">
+      <div *ngFor="let location of locations" class="location-card">
+        <h3 class="location-name">{{ location.name }}</h3>
+        <p class="location-code">Code: {{ location.code }}</p>
+        <p class="location-address" *ngIf="location.address">{{ location.address }}</p>
+        <span [class]="'status-badge ' + (location.status === 'active' ? 'active' : 'inactive')">
+          {{ location.status }}
+        </span>
+        <div class="location-actions">
+          <button (click)="openLocationModal(location)" class="action-btn edit-btn">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Modal -->
+  <div class="modal-overlay" *ngIf="showUserModal" (click)="closeUserModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedUser ? 'Edit' : 'Add' }} User</h3>
+        <button (click)="closeUserModal()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="userForm" (ngSubmit)="saveUser()" class="modal-body">
+        <!-- Basic Information Section -->
+        <h4 class="form-section-title">Basic Information</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" formControlName="name" class="form-input" [class.error]="userForm.get('name')?.invalid && userForm.get('name')?.touched" />
+            <div *ngIf="userForm.get('name')?.invalid && userForm.get('name')?.touched" class="error-message">
+              <span *ngIf="userForm.get('name')?.hasError('required')">Name is required</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email *</label>
+            <input type="email" formControlName="email" class="form-input" [class.error]="userForm.get('email')?.invalid && userForm.get('email')?.touched" />
+            <div *ngIf="userForm.get('email')?.invalid && userForm.get('email')?.touched" class="error-message">
+              <span *ngIf="userForm.get('email')?.hasError('required')">Email is required</span>
+              <span *ngIf="userForm.get('email')?.hasError('email')">Please enter a valid email address</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" formControlName="phone" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Secondary Phone</label>
+            <input type="tel" formControlName="secondary_phone" class="form-input" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date of Birth</label>
+            <input type="date" formControlName="date_of_birth" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Joining Date</label>
+            <input type="date" formControlName="joining_date" class="form-input" />
+          </div>
+        </div>
+        <div class="form-group" *ngIf="!selectedUser">
+          <label class="form-label">Password *</label>
+          <div class="password-wrapper">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              class="form-input"
+              [class.error]="userForm.get('password')?.invalid && userForm.get('password')?.touched"
+            />
+            <button type="button" class="password-toggle" (click)="showPassword = !showPassword">
+              {{ showPassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          <div *ngIf="userForm.get('password')?.invalid && userForm.get('password')?.touched" class="error-message">
+            <span *ngIf="userForm.get('password')?.hasError('required')">Password is required</span>
+            <span *ngIf="userForm.get('password')?.hasError('minlength')">Password must be at least 6 characters</span>
+          </div>
+        </div>
+
+        <!-- Location & Role Section -->
+        <h4 class="form-section-title">Location & Role</h4>
+        <div class="form-row">
+          <div class="form-group">
+
+            <label class="form-label">Location *</label>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Select Location</mat-label>
+              <mat-select formControlName="location_id" [disabled]="!isSuperAdmin()">
+                <mat-option *ngFor="let loc of locations" [value]="loc.id">
+                  {{ loc.name }}
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="!isSuperAdmin()">Your location is automatically selected</mat-hint>
+            </mat-form-field>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Designation</label>
+            <input type="text" formControlName="designation" class="form-input" placeholder="e.g., Manager, Cashier" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Roles *</label>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Select Roles</mat-label>
+            <mat-select formControlName="roles" multiple [class.error]="userForm.get('roles')?.invalid && userForm.get('roles')?.touched">
+              <mat-option *ngIf="roles.length === 0" disabled>
+                Loading roles...
+              </mat-option>
+              <mat-option *ngFor="let role of roles" [value]="role.id">
+                {{ role.name }}
+              </mat-option>
+            </mat-select>
+            <mat-hint>Select one or more roles</mat-hint>
+            <mat-error *ngIf="userForm.get('roles')?.invalid && userForm.get('roles')?.touched">
+              <span *ngIf="userForm.get('roles')?.hasError('required')">At least one role is required</span>
+            </mat-error>
+          </mat-form-field>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status *</label>
+          <select formControlName="status" class="form-select">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        <!-- Education Section -->
+        <h4 class="form-section-title">Education</h4>
+        <div class="form-group">
+          <label class="form-label">Education</label>
+          <select formControlName="education" class="form-select">
+            <option value="">Select Education</option>
+            <option value="High School">High School</option>
+            <option value="Diploma">Diploma</option>
+            <option value="Bachelor's Degree">Bachelor's Degree</option>
+            <option value="Master's Degree">Master's Degree</option>
+            <option value="PhD">PhD</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Education Details</label>
+          <textarea formControlName="education_details" class="form-textarea" rows="3" placeholder="Institution name, field of study, etc."></textarea>
+        </div>
+
+        <!-- Experience Section -->
+        <h4 class="form-section-title">Experience</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Experience (Years)</label>
+            <input type="number" formControlName="experience_years" min="0" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Salary (₹)</label>
+            <input type="number" formControlName="salary" step="0.01" min="0" class="form-input" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Experience Details</label>
+          <textarea formControlName="experience_details" class="form-textarea" rows="3" placeholder="Previous companies, roles, achievements, etc."></textarea>
+        </div>
+
+        <!-- Address Section -->
+        <h4 class="form-section-title">Address</h4>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <textarea formControlName="address" class="form-textarea" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" formControlName="city" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input type="text" formControlName="state" class="form-input" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Postal Code</label>
+          <input type="text" formControlName="postal_code" class="form-input" />
+        </div>
+
+        <!-- Emergency Contact Section -->
+        <h4 class="form-section-title">Emergency Contact</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Emergency Contact Name</label>
+            <input type="text" formControlName="emergency_contact_name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emergency Contact Phone</label>
+            <input type="tel" formControlName="emergency_contact_phone" class="form-input" />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button mat-button type="button" (click)="closeUserModal()">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="userForm.disabled">
+            {{ userForm.disabled ? 'Saving...' : 'Save' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Role Modal -->
+  <div class="modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedRole ? 'Edit' : 'Add' }} Role</h3>
+        <button (click)="closeRoleModal()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="roleForm" (ngSubmit)="saveRole()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Name *</label>
+          <input type="text" formControlName="name" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug *</label>
+          <input type="text" formControlName="slug" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea formControlName="description" class="form-textarea" rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button mat-button type="button" (click)="closeRoleModal()">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="roleForm.invalid">
+            <mat-icon>save</mat-icon> Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Location Modal -->
+  <div class="modal-overlay" *ngIf="showLocationModal" (click)="closeLocationModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedLocation ? 'Edit' : 'Add' }} Location</h3>
+        <button (click)="closeLocationModal()" class="modal-close">×</button>
+      </div>
+      <form [formGroup]="locationForm" (ngSubmit)="saveLocation()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Name *</label>
+          <input type="text" formControlName="name" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Code *</label>
+          <input type="text" formControlName="code" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <textarea formControlName="address" class="form-textarea" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="text" formControlName="phone" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" formControlName="email" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status *</label>
+          <select formControlName="status" class="form-select">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button mat-button type="button" (click)="closeLocationModal()">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="locationForm.invalid">
+            <mat-icon>save</mat-icon> Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Permission Modal -->
+  <div class="modal-overlay" *ngIf="showPermissionModal" (click)="closePermissionModal()">
+    <div class="modal-content mat-elevation-z8" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedPermission ? 'Edit' : 'Create' }} Permission</h3>
+        <button mat-icon-button (click)="closePermissionModal()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <form [formGroup]="permissionForm" (ngSubmit)="savePermission()" class="modal-body">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Name *</mat-label>
+          <input matInput formControlName="name" placeholder="e.g., View POS" />
+          <mat-error *ngIf="permissionForm.get('name')?.invalid && permissionForm.get('name')?.touched">
+            Name is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Slug *</mat-label>
+          <input matInput formControlName="slug" placeholder="e.g., pos.view" />
+          <mat-hint>Format: module.feature.action (e.g., pos.view, inventory.item.create)</mat-hint>
+          <mat-error *ngIf="permissionForm.get('slug')?.invalid && permissionForm.get('slug')?.touched">
+            Slug is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Module *</mat-label>
+          <input matInput formControlName="module" placeholder="e.g., POS, Inventory, Admin" />
+          <mat-error *ngIf="permissionForm.get('module')?.invalid && permissionForm.get('module')?.touched">
+            Module is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description" rows="3" placeholder="Optional description of what this permission allows"></textarea>
+        </mat-form-field>
+
+        <div class="modal-footer">
+          <button mat-button type="button" (click)="closePermissionModal()">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="permissionForm.invalid">
+            <mat-icon>save</mat-icon> Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Role Permissions Modal -->
+  <div class="modal-overlay" *ngIf="selectedRoleForPermissions" (click)="closeRolePermissionsModal()">
+    <div class="modal-content permissions-modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Manage Permissions - {{ selectedRoleForPermissions.name }}</h2>
+        <button (click)="closeRolePermissionsModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="permissions-modal-search">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search by name or slug</mat-label>
+            <input matInput type="text" [(ngModel)]="rolePermissionSearch" placeholder="Type to filter..." />
+            <button mat-icon-button matSuffix *ngIf="rolePermissionSearch" (click)="rolePermissionSearch = ''" type="button" aria-label="Clear">
+              <mat-icon>close</mat-icon>
+            </button>
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
+        </div>
+        <div class="permissions-modal-list">
+          <div *ngFor="let module of getFilteredPermissionModulesForRole()" class="permission-module">
+            <h3 class="module-title">{{ module }}</h3>
+            <div class="permissions-list">
+              <label *ngFor="let permission of getFilteredPermissionsForRoleModule(module)" class="permission-checkbox">
+                <input 
+                  type="checkbox" 
+                  [checked]="rolePermissionIdsDraft.includes(permission.id)"
+                  (change)="toggleRolePermissionDraft(permission.id)"
+                />
+                <span class="permission-label">
+                  <strong>{{ permission.name }}</strong>
+                  <small class="permission-slug">{{ permission.slug }}</small>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="permissions-modal-footer">
+        <button mat-button type="button" (click)="closeRolePermissionsModal()">Cancel</button>
+        <button mat-raised-button color="primary" type="button" (click)="saveRolePermissions()" [disabled]="rolePermissionsSaving">
+          {{ rolePermissionsSaving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Permissions Modal -->
+  <div class="modal-overlay" *ngIf="selectedUserForPermissions" (click)="closeUserPermissionsModal()">
+    <div class="modal-content permissions-modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Manage Permissions - {{ selectedUserForPermissions.name }}</h2>
+        <button (click)="closeUserPermissionsModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="permission-info-section">
+          <p><strong>Note:</strong> User permissions override role permissions. Select permissions below and choose Allow or Deny, then click Save.</p>
+        </div>
+        <div class="permissions-modal-search">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search by name or slug</mat-label>
+            <input matInput type="text" [(ngModel)]="userPermissionSearch" placeholder="Type to filter..." />
+            <button mat-icon-button matSuffix *ngIf="userPermissionSearch" (click)="userPermissionSearch = ''" type="button" aria-label="Clear">
+              <mat-icon>close</mat-icon>
+            </button>
+            <mat-icon matPrefix>search</mat-icon>
+          </mat-form-field>
+        </div>
+        <div class="permissions-modal-list">
+          <div *ngFor="let module of getFilteredPermissionModulesForUser()" class="permission-module">
+            <h3 class="module-title">{{ module }}</h3>
+            <div class="permissions-list">
+              <label *ngFor="let permission of getFilteredPermissionsForUserModule(module)" class="permission-checkbox">
+                <input 
+                  type="checkbox" 
+                  [checked]="userPermissionIdsDraft.includes(permission.id)"
+                  (change)="toggleUserPermissionDraft(permission.id)"
+                />
+                <span class="permission-label">
+                  <strong>{{ permission.name }}</strong>
+                  <small class="permission-slug">{{ permission.slug }}</small>
+                  <span *ngIf="userPermissionIdsDraft.includes(permission.id)" class="permission-type-toggle" (click)="$event.preventDefault(); toggleUserPermissionType(permission.id)">
+                    <span class="badge" [class.badge-allow]="getUserPermissionType(permission.id) === 'allow'" [class.badge-deny]="getUserPermissionType(permission.id) === 'deny'">
+                      {{ getUserPermissionType(permission.id) === 'deny' ? 'Deny' : 'Allow' }}
+                    </span>
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="permissions-modal-footer">
+        <button mat-button type="button" (click)="closeUserPermissionsModal()">Cancel</button>
+        <button mat-raised-button color="primary" type="button" (click)="saveUserPermissions()" [disabled]="userPermissionsSaving">
+          {{ userPermissionsSaving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

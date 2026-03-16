@@ -1,0 +1,21 @@
+<article class="modern-card">
+  <div class="modern-img-wrap">
+    <img *ngIf="item.image_url" class="modern-img" [src]="item.image_url" [alt]="item.name" loading="lazy" />
+    <div *ngIf="!item.image_url" class="modern-img-placeholder"><span>{{ item.name.charAt(0) }}</span></div>
+    <div class="modern-badges">
+      <span class="modern-badge popular" *ngIf="item.popular">Popular</span>
+      <span class="modern-badge chef" *ngIf="item.chef_recommended">Chef's Pick</span>
+      <span class="modern-badge veg" *ngIf="item.vegetarian">V</span>
+      <span class="modern-badge spicy" *ngIf="item.spicy">Spicy</span>
+    </div>
+  </div>
+  <div class="modern-body">
+    <h3 class="modern-title">{{ item.name }}</h3>
+    <p class="modern-desc" *ngIf="item.description">{{ item.description }}</p>
+    <div class="modern-meta">
+      <span class="modern-rating" *ngIf="item.rating">★ {{ item.rating }}</span>
+      <span class="modern-price">₹{{ item.display_price | number:'1.2-2' }}</span>
+    </div>
+    <button type="button" class="modern-order-btn" (click)="onOrder()">Order</button>
+  </div>
+</article>

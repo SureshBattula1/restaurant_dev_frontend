@@ -1,0 +1,35 @@
+<div class="transactions-container">
+  <!-- Loader Overlay -->
+  <app-loader *ngIf="loading" size="large" [overlay]="true" message="Loading transactions..."></app-loader>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Transaction Management</h1>
+    <div class="header-actions">
+      <div *ngIf="isSuperAdmin()" class="location-filter-header">
+        <label class="filter-label">Branch</label>
+        <app-branch-selector
+          [(selectedLocationId)]="selectedLocationId"
+          (selectedLocationIdChange)="loadTransactions()">
+        </app-branch-selector>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Section -->
+  <div class="content-section">
+    <div class="section-header">
+      <h2 class="section-title">Cash Transactions</h2>
+    </div>
+
+    <app-data-table
+      [config]="transactionsTableConfig"
+      [data]="transactionsTableData"
+      [pagination]="transactionsTablePagination"
+      [loading]="transactionsTableLoading"
+      [loadDataFn]="loadTransactionsTableData"
+      [enableRealtime]="true"
+      [realtimeUpdates$]="transactionsRealtimeUpdates$">
+    </app-data-table>
+  </div>
+</div>

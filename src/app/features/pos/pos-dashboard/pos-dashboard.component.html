@@ -1,0 +1,518 @@
+<div class="pos-container">
+  <!-- Main Content -->
+  <div class="pos-content">
+    <!-- Products Section -->
+    <div class="products-section">
+      <!-- Products Section Header -->
+      <div class="products-header">
+        <div class="products-header-left">
+          <div class="location-info" *ngIf="isSuperAdmin() && currentUser && currentUser.location">
+            <span class="location-badge-small">{{ currentUser.location.name || 'Main Branch' }}</span>
+          </div>
+          <div class="location-selector" *ngIf="isSuperAdmin()">
+            <select [(ngModel)]="selectedLocationId" (change)="onLocationChange()" class="location-select">
+              <option [value]="undefined">All Locations</option>
+              <option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</option>
+            </select>
+          </div>
+        </div>
+        <button (click)="toggleSalesList()" [class.active]="showSalesList" class="btn-sales-list">
+          <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+          </svg>
+          <span>Sales List</span>
+        </button>
+      </div>
+      <!-- Search -->
+      <form [formGroup]="searchForm" class="search-container">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <input
+            type="text"
+            formControlName="query"
+            placeholder="Search products or scan barcode..."
+            class="search-input"
+            (keyup.enter)="scanBarcode($event)"
+          />
+        </div>
+      </form>
+
+      <!-- Categories -->
+      <div class="categories-container">
+        <div *ngIf="loadingCategories" class="categories-loader">
+          <app-loader size="small"></app-loader>
+        </div>
+        <button
+          *ngFor="let category of categories; trackBy: trackByCategoryId"
+          (click)="selectCategory(category)"
+          [class.active]="(selectedCategory && selectedCategory.id) === category.id"
+          class="category-btn"
+        >
+          {{ category.name }}
+        </button>
+      </div>
+
+      <!-- Sales List (when toggled) -->
+      <div *ngIf="showSalesList" class="sales-list-container">
+        <div class="sales-list-header">
+          <h3>Recent Sales</h3>
+          <button (click)="toggleSalesList()" class="btn-close-sales">×</button>
+        </div>
+        <div class="sales-list-content">
+          <!-- Loading State -->
+          <div *ngIf="loadingSales" class="sales-loader">
+            <app-loader size="medium" message="Loading sales..."></app-loader>
+          </div>
+          
+          <!-- Error State -->
+          <div *ngIf="!loadingSales && salesError" class="error-state">
+            <p class="error-message">{{ salesError }}</p>
+            <button (click)="loadRecentSales()" class="btn-retry">Retry</button>
+          </div>
+          
+          <!-- Empty State -->
+          <div *ngIf="!loadingSales && !salesError && recentSales.length === 0" class="empty-state">
+            <p>No sales found</p>
+          </div>
+          
+          <!-- Sales List -->
+          <div *ngIf="!loadingSales && !salesError && recentSales.length > 0">
+            <div *ngFor="let sale of recentSales" class="sale-item" (click)="viewSale(sale)">
+              <div class="sale-item-header">
+                <span class="sale-number">#{{ sale.sale_number || sale.id }}</span>
+                <span class="sale-status" [class]="'status-' + sale.status">{{ sale.status }}</span>
+              </div>
+              <div class="sale-item-details">
+                <div class="sale-date">{{ sale.sale_date | date:'short' }}</div>
+                <div class="sale-total">₹{{ sale.total | number:'1.2-2' }}</div>
+              </div>
+              <div class="sale-item-footer" *ngIf="sale.customer">
+                <span class="sale-customer">{{ sale.customer?.person?.first_name }} {{ sale.customer?.person?.last_name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Sales Pagination -->
+        <div class="sales-pagination" *ngIf="salesTotal > 0">
+          <div class="pagination-info">
+            <span>Showing {{ ((salesCurrentPage - 1) * salesPerPage) + 1 }} to {{ Math.min(salesCurrentPage * salesPerPage, salesTotal) }} of {{ salesTotal }} sales</span>
+          </div>
+          <div class="pagination-controls">
+            <button 
+              (click)="goToSalesPage(salesCurrentPage - 1)" 
+              [disabled]="salesCurrentPage === 1"
+              class="pagination-btn"
+            >
+              <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+            <span class="pagination-page-info">Page {{ salesCurrentPage }} of {{ salesLastPage }}</span>
+            <button 
+              (click)="goToSalesPage(salesCurrentPage + 1)" 
+              [disabled]="salesCurrentPage === salesLastPage"
+              class="pagination-btn"
+            >
+              <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products Grid -->
+      <div class="products-grid" *ngIf="!showSalesList">
+        <!-- Elegant Loader -->
+        <div *ngIf="loadingItems" class="products-loader">
+          <app-loader size="medium" message="Loading products..."></app-loader>
+        </div>
+        
+        <!-- Products -->
+        <div
+          *ngFor="let item of filteredItems; trackBy: trackByItemId"
+          (click)="addToCart(item)"
+          [class.product-card]="true"
+          [class.product-card-disabled]="!isItemActiveInLocation(item)"
+          [style.opacity]="isItemActiveInLocation(item) ? '1' : '0.6'"
+          [style.cursor]="isItemActiveInLocation(item) ? 'pointer' : 'not-allowed'"
+        >
+          <div class="product-info">
+            <div class="product-header">
+              <h3 class="product-name">{{ item.name }}</h3>
+              <div class="product-badge out-of-stock-badge" *ngIf="!isItemActiveInLocation(item)">
+                Out of Stock
+              </div>
+              <div class="product-badge" *ngIf="item.tax_rate && isItemActiveInLocation(item)">Tax: {{ item.tax_rate }}%</div>
+              <div class="variant-badge" *ngIf="item.variants && item.variants.length > 0 && isItemActiveInLocation(item)">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+                Variants
+              </div>
+            </div>
+            <p class="product-sku">{{ item.sku }}</p>
+            <p class="product-price" *ngIf="!item.variants || item.variants.length === 0">₹{{ item.selling_price | number:'1.2-2' }}</p>
+            <p class="product-price variant-price" *ngIf="item.variants && item.variants.length > 0">
+              From ₹{{ (item.variants | slice:0:1)[0].price | number:'1.2-2' }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!loadingItems && filteredItems.length === 0" class="empty-state">
+        <p>No products found</p>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-container" *ngIf="!loadingItems && totalItems > 0">
+        <div class="pagination-info">
+          <span>Showing {{ ((currentPage - 1) * perPage) + 1 }} to {{ Math.min(currentPage * perPage, totalItems) }} of {{ totalItems }} items</span>
+        </div>
+        <div class="pagination-controls">
+          <button 
+            (click)="goToPage(currentPage - 1)" 
+            [disabled]="currentPage === 1"
+            class="pagination-btn"
+            title="Previous page"
+          >
+            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <div class="pagination-pages">
+            <button
+              *ngFor="let page of getPaginationPages()"
+              (click)="handlePageClick(page)"
+              [class.active]="page === currentPage"
+              [class.ellipsis]="page === '...'"
+              class="pagination-page-btn"
+              [disabled]="page === '...'"
+            >
+              {{ page }}
+            </button>
+          </div>
+          <button 
+            (click)="goToPage(currentPage + 1)" 
+            [disabled]="currentPage === lastPage"
+            class="pagination-btn"
+            title="Next page"
+          >
+            <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cart Section -->
+    <div class="cart-section">
+      <!-- Cart Header -->
+      <div class="cart-header-compact">
+        <div class="cart-header-content">
+          <h2 class="cart-title-compact">Cart</h2>
+          <span class="cart-items-badge-compact" *ngIf="cartItems.length > 0">{{ cartItems.length }}</span>
+          <button (click)="clearCart()" class="clear-cart-btn-compact" *ngIf="cartItems.length > 0" title="Clear all">
+            <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cart Items -->
+      <div class="cart-items-compact" *ngIf="cartItems.length > 0">
+        <div *ngFor="let item of cartItems.controls; trackBy: trackByCartItemId; let i = index" class="cart-item-compact">
+          <div class="item-info-compact">
+            <div class="item-name-compact">{{ getItemName(item, i) }}</div>
+            <div class="item-price-qty">
+              <span>₹{{ getItemPrice(item) | number:'1.2-2' }}</span>
+              <span class="multiply">×</span>
+              <span>{{ getItemQuantity(item) }}</span>
+            </div>
+          </div>
+          <div class="item-right-compact">
+            <div class="item-total-compact">₹{{ getItemTotal(i) | number:'1.2-2' }}</div>
+            <div class="item-controls-compact">
+              <button (click)="updateQuantity(i, -1)" class="qty-btn-compact" [disabled]="getItemQuantity(item) <= 1">−</button>
+              <input
+                type="number"
+                [formControl]="getQuantityControl(item)"
+                class="qty-input-compact"
+                min="1"
+                step="1"
+                (blur)="onQuantityBlur(item, i)"
+                (keydown)="onQuantityKeydown($event)"
+              />
+              <button (click)="updateQuantity(i, 1)" class="qty-btn-compact">+</button>
+              <button (click)="removeFromCart(i)" class="remove-btn-compact" title="Remove">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="cartItems.length === 0" class="empty-cart-modern">
+        <div class="empty-cart-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+          </svg>
+        </div>
+        <p class="empty-cart-text">Your cart is empty</p>
+        <p class="empty-cart-hint">Add items from the menu to get started</p>
+      </div>
+
+      <!-- Cart Summary -->
+      <div class="cart-summary-modern" *ngIf="cartItems.length > 0">
+        <div class="summary-section">
+          <div class="summary-row-modern">
+            <span class="summary-label">Subtotal</span>
+            <span class="summary-value">₹{{ subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-row-modern" *ngIf="taxAmount > 0">
+            <span class="summary-label">Tax</span>
+            <span class="summary-value">₹{{ taxAmount | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-row-modern discount-row" *ngIf="discountAmount > 0">
+            <span class="summary-label">Discount</span>
+            <span class="summary-value discount-value">-₹{{ discountAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+        <div class="summary-total-section">
+          <span class="total-label">Total</span>
+          <span class="total-amount-modern">₹{{ total | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <!-- Customer & Table Info -->
+      <div class="cart-actions-modern" *ngIf="cartItems.length > 0">
+        <div class="action-grid">
+          <button (click)="openCustomerModal()" class="action-btn-modern">
+            <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <div class="action-btn-content">
+              <span class="action-label-modern">Customer</span>
+              <span class="action-value-modern">{{ getCustomerStatusText() }}</span>
+            </div>
+          </button>
+          <button (click)="showTableModal = true" class="action-btn-modern">
+            <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            <div class="action-btn-content">
+              <span class="action-label-modern">Table</span>
+              <span class="action-value-modern">{{ saleForm.get('table_number')?.value || 'None' }}</span>
+            </div>
+          </button>
+          <button (click)="openDiscountModal()" class="action-btn-modern">
+            <svg class="icon-xs" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="action-btn-content">
+              <span class="action-label-modern">Discount</span>
+              <span class="action-value-modern" *ngIf="discountAmount > 0">₹{{ discountAmount | number:'1.2-2' }}</span>
+              <span class="action-value-modern" *ngIf="discountAmount === 0">None</span>
+            </div>
+          </button>
+        </div>
+        <div class="checkout-buttons-row">
+          <button (click)="openPaymentModal()" class="btn-checkout-modern" [disabled]="processing || cartItems.length === 0">
+            <div class="checkout-content">
+              <span class="checkout-label-modern">Pay Mode</span>
+              <span class="checkout-amount-modern">₹{{ total }}</span>
+            </div>
+          </button>
+          <button (click)="quickCheckoutUpi()" class="btn-checkout-modern btn-checkout-upi" [disabled]="processing || cartItems.length === 0">
+            <div class="checkout-content">
+              <span class="checkout-label-modern">UPI Checkout</span>
+              <span class="checkout-amount-modern">₹{{ total }}</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal-overlay" *ngIf="showPaymentModal" (click)="closePaymentModal()">
+  <div class="modal-content payment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Payment</h3>
+      <button (click)="closePaymentModal()" class="modal-close">×</button>
+    </div>
+    <form [formGroup]="paymentForm" (ngSubmit)="processSale()" class="payment-modal-body">
+      <div class="payment-summary">
+        <div class="summary-row-modern">
+          <span class="summary-label">Subtotal</span>
+          <span class="summary-value">₹{{ subtotal | number:'1.2-2' }}</span>
+        </div>
+        <div class="summary-row-modern" *ngIf="taxAmount > 0">
+          <span class="summary-label">Tax</span>
+          <span class="summary-value">₹{{ taxAmount | number:'1.2-2' }}</span>
+        </div>
+        <div class="summary-row-modern" *ngIf="discountAmount > 0">
+          <span class="summary-label">Discount</span>
+          <span class="summary-value discount-value">-₹{{ discountAmount | number:'1.2-2' }}</span>
+        </div>
+        <div class="summary-total-section payment-total-row">
+          <span class="total-label">Total</span>
+          <span class="total-amount-modern">₹{{ total | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="payments-section">
+        <div class="section-header">
+          <h4 class="section-title">Payments</h4>
+          <button type="button" (click)="addPayment()" class="btn-secondary-compact">
+            + Add Payment
+          </button>
+        </div>
+        <div
+          class="payment-row"
+          *ngFor="let p of $any(paymentForm.get('payments'))?.controls; let i = index"
+          [formGroup]="$any(p)"
+        >
+          <select formControlName="method" class="payment-input">
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="upi">UPI</option>
+            <option value="other">Other</option>
+          </select>
+          <input
+            type="number"
+            formControlName="amount"
+            class="payment-input"
+            step="0.01"
+            min="0.01"
+          />
+          <input
+            type="text"
+            formControlName="reference_number"
+            class="payment-input"
+            placeholder="Reference (optional)"
+          />
+          <button type="button" (click)="removePayment(i)" class="btn-remove-compact" title="Remove">×</button>
+        </div>
+        <div class="summary-row-modern payment-total-summary">
+          <span class="summary-label">Payment Total</span>
+          <span class="summary-value">₹{{ paymentTotal | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="modal-footer payment-modal-footer">
+        <button type="button" (click)="closePaymentModal()" class="btn-secondary">Cancel</button>
+        <button type="submit" [disabled]="processing" class="btn-primary">
+          <span *ngIf="!processing">Pay &amp; Complete</span>
+          <span *ngIf="processing">Processing...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Variant Selector Modal -->
+<app-variant-selector
+  [item]="selectedItemForVariant"
+  [variants]="selectedItemForVariant?.variants || []"
+  [show]="showVariantModal"
+  (close)="closeVariantModal()"
+  (selected)="onVariantSelected($event)">
+</app-variant-selector>
+
+<!-- Customer Modal -->
+<div class="modal-overlay" *ngIf="showCustomerModal" (click)="closeCustomerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Select Customer</h3>
+      <button (click)="closeCustomerModal()" class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="loadingCustomers" class="text-center">
+        <app-loader size="small"></app-loader>
+      </div>
+      <div class="customer-list" *ngIf="!loadingCustomers">
+        <div
+          *ngFor="let customer of customers; trackBy: trackByCustomerId"
+          (click)="selectCustomer(customer)"
+          class="customer-item"
+        >
+          <div class="customer-info">
+            <h4>{{ customer.person?.first_name }} {{ customer.person?.last_name }}</h4>
+            <p class="customer-code">{{ customer.customer_code || 'N/A' }}</p>
+          </div>
+        </div>
+        <div *ngIf="customers.length === 0" class="text-center text-gray-500 p-4">
+          No customers found
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Table Modal -->
+<div class="modal-overlay" *ngIf="showTableModal" (click)="showTableModal = false">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Select Table</h3>
+      <button (click)="showTableModal = false" class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Table Number</label>
+        <input
+          type="text"
+          [formControl]="$any(saleForm.get('table_number'))"
+          class="form-input"
+          placeholder="Enter table number"
+        />
+      </div>
+      <div class="modal-footer">
+        <button (click)="showTableModal = false" class="btn-secondary">Cancel</button>
+        <button (click)="showTableModal = false" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Discount Modal -->
+<div class="modal-overlay" *ngIf="showDiscountModal" (click)="closeDiscountModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Apply Discount</h3>
+      <button (click)="closeDiscountModal()" class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Discount Type</label>
+        <select [formControl]="$any(saleForm.get('discount_type'))" class="form-input">
+          <option value="fixed">Fixed Amount</option>
+          <option value="percentage">Percentage</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ saleForm.get('discount_type')?.value === 'percentage' ? 'Discount Percentage' : 'Discount Amount' }}</label>
+        <input
+          type="number"
+          [formControl]="$any(saleForm.get('discount_amount'))"
+          class="form-input"
+          [placeholder]="saleForm.get('discount_type')?.value === 'percentage' ? 'Enter percentage (e.g., 10)' : 'Enter amount'"
+          min="0"
+          step="0.01"
+        />
+      </div>
+      <div class="discount-preview" *ngIf="discountAmount > 0">
+        <p><strong>Discount Amount:</strong> ₹{{ discountAmount | number:'1.2-2' }}</p>
+        <p><strong>New Total:</strong> ₹{{ total | number:'1.2-2' }}</p>
+      </div>
+      <div class="modal-footer">
+        <button (click)="closeDiscountModal()" class="btn-secondary">Cancel</button>
+        <button (click)="applyDiscount()" class="btn-primary">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+

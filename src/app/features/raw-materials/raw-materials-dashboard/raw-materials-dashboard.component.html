@@ -1,0 +1,268 @@
+<div class="raw-materials-dashboard">
+  <!-- Loader Overlay -->
+  <app-loader *ngIf="loading" size="large" [overlay]="true" message="Loading dashboard data..."></app-loader>
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Raw Materials Dashboard</h1>
+    <div class="header-actions">
+      <!-- Location Selector for Super Admin Only -->
+      <div class="location-selector" *ngIf="isSuperAdmin() && locations.length > 0">
+        <label for="locationSelect" class="form-label">Location:</label>
+        <select 
+          id="locationSelect"
+          [(ngModel)]="selectedLocationId" 
+          (change)="onLocationChange()" 
+          class="location-select"
+        >
+          <option [value]="undefined">All Locations</option>
+          <option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <p>Loading dashboard...</p>
+  </div>
+
+  <div *ngIf="!loading && dashboardData" class="dashboard-content">
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="card-icon">📦</div>
+        <div class="card-content">
+          <h3 class="card-value">{{ dashboardData.summary.total_items }}</h3>
+          <p class="card-label">Total Raw Materials</p>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <h3 class="card-value">₹{{ dashboardData.summary.total_stock_value | number:'1.2-2' }}</h3>
+          <p class="card-label">Total Stock Value</p>
+        </div>
+      </div>
+      <div class="summary-card warning">
+        <div class="card-icon">⚠️</div>
+        <div class="card-content">
+          <h3 class="card-value">{{ dashboardData.summary.low_stock_count }}</h3>
+          <p class="card-label">Low Stock Items</p>
+        </div>
+      </div>
+      <div class="summary-card danger">
+        <div class="card-icon">✗</div>
+        <div class="card-content">
+          <h3 class="card-value">{{ dashboardData.summary.out_of_stock_count }}</h3>
+          <p class="card-label">Out of Stock</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low Stock Alerts Section -->
+    <div class="alerts-section" *ngIf="lowStockAlerts.length > 0">
+      <div class="section-header">
+        <h2 class="section-title">⚠️ Low Stock Alerts</h2>
+      </div>
+      <div class="alerts-grid">
+        <div *ngFor="let alert of lowStockAlerts" class="alert-card" [class]="'alert-' + alert.status">
+          <div class="alert-header">
+            <h3 class="alert-item-name">{{ alert.item_name }}</h3>
+            <span class="alert-badge">{{ alert.status === 'out-of-stock' ? 'Out of Stock' : 'Low Stock' }}</span>
+          </div>
+          <div class="alert-body">
+            <div class="alert-info">
+              <p><strong>Current:</strong> {{ alert.current_quantity }} {{ alert.unit }}</p>
+              <p><strong>Threshold:</strong> {{ alert.threshold }} {{ alert.unit }}</p>
+              <p *ngIf="alert.shortage > 0"><strong>Shortage:</strong> {{ alert.shortage }} {{ alert.unit }}</p>
+              <p *ngIf="alert.estimated_cost_to_restock > 0">
+                <strong>Est. Cost to Restock:</strong> ₹{{ alert.estimated_cost_to_restock | number:'1.2-2' }}
+              </p>
+            </div>
+            <button (click)="quickStockIn(alert)" class="btn-primary btn-sm">Quick Restock</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stock Levels Section -->
+    <div class="stock-levels-section">
+      <div class="section-header">
+        <h2 class="section-title">Stock Levels</h2>
+        <div class="section-controls">
+          <!-- Search Box -->
+          <div class="search-box">
+            <input 
+              type="text" 
+              [(ngModel)]="searchQuery" 
+              (input)="onSearchChange()"
+              placeholder="Search by name, SKU, or category..."
+              class="search-input"
+            />
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          <!-- Toggle Good Stock -->
+          <label class="toggle-label">
+            <input type="checkbox" [(ngModel)]="showGoodStock" (change)="toggleGoodStock()" />
+            <span>Show Good Stock</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Out of Stock Items (Compact View) -->
+      <div class="out-of-stock-section" *ngIf="outOfStockItems.length > 0">
+        <h3 class="subsection-title">⚠️ Out of Stock ({{ outOfStockItems.length }})</h3>
+        <div class="compact-items-grid">
+          <div *ngFor="let item of outOfStockItems" 
+               class="compact-item-card out-of-stock">
+            <div class="compact-item-header">
+              <span class="compact-item-name">{{ item.name }}</span>
+              <span class="compact-item-sku">{{ item.sku }}</span>
+            </div>
+            <div class="compact-item-info">
+              <span class="compact-stock">0 {{ item.unit }}</span>
+              <button (click)="quickStockIn(item)" class="btn-compact">Restock</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Low Stock & Warning Items (Detailed View) -->
+      <div class="detailed-stock-section" *ngIf="lowStockAndWarningItems.length > 0">
+        <h3 class="subsection-title">
+          ⚠️ Low Stock & Warnings ({{ lowStockAndWarningItems.length }})
+        </h3>
+        <div class="stock-grid">
+          <div *ngFor="let item of lowStockAndWarningItems" 
+               class="stock-card" [class]="getStockStatusClass(item.stock_status)">
+            <div class="stock-header">
+              <h3 class="stock-item-name">{{ item.name }}</h3>
+              <span class="stock-status-badge" [class]="getStockStatusClass(item.stock_status)">
+                {{ getStockStatusIcon(item.stock_status) }} {{ item.stock_status | titlecase }}
+              </span>
+            </div>
+            <div class="stock-body">
+              <div class="stock-info-row">
+                <span class="info-label">SKU:</span>
+                <span class="info-value">{{ item.sku }}</span>
+              </div>
+              <div class="stock-info-row">
+                <span class="info-label">Current Stock:</span>
+                <span class="info-value highlight">{{ item.current_quantity }} {{ item.unit }}</span>
+              </div>
+              <div class="stock-info-row">
+                <span class="info-label">Threshold:</span>
+                <span class="info-value">{{ item.low_stock_threshold }} {{ item.unit }}</span>
+              </div>
+              <div class="stock-info-row">
+                <span class="info-label">Cost Price:</span>
+                <span class="info-value">₹{{ item.cost_price | number:'1.2-2' }}</span>
+              </div>
+              <div class="stock-info-row">
+                <span class="info-label">Stock Value:</span>
+                <span class="info-value">₹{{ item.stock_value | number:'1.2-2' }}</span>
+              </div>
+            </div>
+            <div class="stock-actions">
+              <button (click)="quickStockIn(item)" class="btn-primary btn-sm">Stock In</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Good Stock Items (Only if toggled on) -->
+      <div class="good-stock-section" *ngIf="showGoodStock && goodStockItems.length > 0">
+        <h3 class="subsection-title">
+          ✓ Good Stock ({{ goodStockItems.length }})
+        </h3>
+        <div class="compact-items-grid">
+          <div *ngFor="let item of paginatedGoodStockItems" 
+               class="compact-item-card good">
+            <div class="compact-item-header">
+              <span class="compact-item-name">{{ item.name }}</span>
+              <span class="compact-item-sku">{{ item.sku }}</span>
+            </div>
+            <div class="compact-item-info">
+              <span class="compact-stock">{{ item.current_quantity }} {{ item.unit }}</span>
+              <span class="compact-value">₹{{ item.stock_value | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Pagination for Good Stock -->
+        <div class="pagination" *ngIf="totalPages > 1">
+          <button (click)="prevPage()" [disabled]="!hasPrevPage" class="page-btn">Previous</button>
+          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="!hasNextPage" class="page-btn">Next</button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredItems.length === 0" class="empty-state">
+        <p *ngIf="searchQuery">No items found matching "{{ searchQuery }}"</p>
+        <p *ngIf="!searchQuery && !showGoodStock">All items are in good stock. Toggle "Show Good Stock" to view all items.</p>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section" *ngIf="dashboardData && dashboardData.items.length > 0">
+      <div class="section-header">
+        <h2 class="section-title">📊 Analytics & Insights</h2>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-container">
+          <canvas id="consumptionChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="stockValueChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="stockStatusChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Consumption Trends Table -->
+    <div class="trends-section" *ngIf="dashboardData && dashboardData.consumption_trends && dashboardData.consumption_trends.length > 0">
+      <div class="section-header">
+        <h2 class="section-title">📈 Consumption Trends (Last 30 Days)</h2>
+      </div>
+      <div class="trends-table-container">
+        <table class="trends-table">
+          <thead>
+            <tr>
+              <th>Raw Material</th>
+              <th>Total Consumed</th>
+              <th>Avg Daily</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let trend of dashboardData.consumption_trends">
+              <td>{{ trend.item_name }}</td>
+              <td>
+                {{ getTotalConsumption(trend) | number:'1.2-2' }} {{ getItemUnit(trend.item_name) }}
+              </td>
+              <td>
+                {{ getAverageDailyConsumption(trend) | number:'1.2-2' }} {{ getItemUnit(trend.item_name) }}
+              </td>
+              <td>
+                <span class="trend-indicator">
+                  {{ getTrendIndicator(trend) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="dashboardData && dashboardData.items.length === 0" class="empty-state">
+      <p>No raw materials found. Add items to start tracking inventory.</p>
+    </div>
+  </div>
+</div>
+

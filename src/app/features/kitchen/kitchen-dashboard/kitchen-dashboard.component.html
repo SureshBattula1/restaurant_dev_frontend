@@ -1,0 +1,148 @@
+<div class="kitchen-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Kitchen Display System</h1>
+    <div class="header-actions">
+      <app-branch-selector 
+        *ngIf="isSuperAdmin()"
+        [(selectedLocationId)]="selectedLocationId"
+        (locationChange)="onLocationChange()">
+      </app-branch-selector>
+    </div>
+  </div>
+
+  <!-- Status Filters -->
+  <div class="filters-container">
+    <button
+      *ngFor="let status of ['all', 'pending', 'preparing', 'cooking', 'ready']"
+      (click)="filterByStatus(status)"
+      [class.active]="statusFilter === status"
+      class="filter-btn"
+    >
+      {{ status | titlecase }}
+      <span class="badge" *ngIf="status !== 'all'">
+        {{ getOrderCountByStatus(status) }}
+      </span>
+    </button>
+  </div>
+
+  <!-- Orders Grid -->
+  <div class="orders-grid">
+    <div
+      *ngFor="let order of filteredOrders"
+      (click)="selectOrder(order)"
+      class="order-card"
+      [class.high-priority]="order.priority && order.priority >= 3"
+    >
+      <div class="order-header">
+        <div class="order-number">
+          <span class="order-label">Order #</span>
+          <span class="order-value">{{ order.order_number }}</span>
+        </div>
+        <div class="order-meta">
+          <span [class]="'status-badge ' + getStatusColor(order.status)">
+            {{ order.status | titlecase }}
+          </span>
+          <span [class]="'priority-badge ' + getPriorityColor(order.priority || 0)" *ngIf="order.priority">
+            Priority {{ order.priority }}
+          </span>
+        </div>
+      </div>
+
+      <div class="order-body">
+        <div class="order-info">
+          <div class="info-row" *ngIf="order.table_number">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+            </svg>
+            <span>Table {{ order.table_number }}</span>
+          </div>
+          <div class="info-row">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>{{ getElapsedTime(order.created_at) }}</span>
+          </div>
+          <div class="info-row" *ngIf="order.estimated_time">
+            <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>ETA: {{ order.estimated_time }} min</span>
+          </div>
+        </div>
+
+        <div class="order-items">
+          <div *ngFor="let item of order.items" class="order-item">
+            <div class="item-quantity">{{ item.quantity }}×</div>
+            <div class="item-name">{{ (item.item && item.item.name) || 'Item' }}</div>
+            <div class="item-status" [class.completed]="item.status === 'ready'">
+              {{ item.status | titlecase }}
+            </div>
+          </div>
+        </div>
+
+        <div class="order-actions">
+          <button
+            *ngIf="order.status !== 'ready' && order.status !== 'delivered'"
+            (click)="markAsReady(order); $event.stopPropagation()"
+            class="action-btn ready-btn"
+          >
+            Mark Ready
+          </button>
+          <button
+            *ngIf="order.status === 'ready'"
+            (click)="markAsDelivered(order); $event.stopPropagation()"
+            class="action-btn delivered-btn"
+          >
+            Mark Delivered
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="filteredOrders.length === 0" class="empty-state">
+    <p>No orders found</p>
+    <p class="text-sm text-gray-500">Orders will appear here when customers place them</p>
+  </div>
+
+  <!-- Status Update Modal -->
+  <div class="modal-overlay" *ngIf="selectedOrder" (click)="closeStatusModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Update Order Status</h3>
+        <button (click)="closeStatusModal()" class="modal-close">×</button>
+      </div>
+      
+      <form [formGroup]="statusForm" (ngSubmit)="updateOrderStatus()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select formControlName="status" class="form-select">
+            <option value="pending">Pending</option>
+            <option value="preparing">Preparing</option>
+            <option value="cooking">Cooking</option>
+            <option value="ready">Ready</option>
+            <option value="delivered">Delivered</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Estimated Time (minutes)</label>
+          <input
+            type="number"
+            formControlName="estimated_time"
+            class="form-input"
+            min="1"
+            placeholder="Enter estimated time"
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeStatusModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Update Status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

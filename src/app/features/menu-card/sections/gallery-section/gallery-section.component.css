@@ -1,0 +1,32 @@
+.gallery {
+  padding: 3.5rem 1.5rem;
+  background: var(--mc-bg-step-gallery);
+}
+.gallery-title {
+  font-family: var(--mc-font-heading);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--mc-charcoal);
+  text-align: center;
+  margin: 0 0 2rem 0;
+  letter-spacing: -0.02em;
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.gallery-item {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--mc-orange-100) 0%, var(--mc-yellow-100) 50%, var(--mc-blue-100) 100%);
+  border-radius: 0.5rem;
+  transition: var(--mc-transition);
+  transform-origin: center;
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+  box-shadow: var(--mc-shadow-md);
+}

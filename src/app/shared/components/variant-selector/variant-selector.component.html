@@ -1,0 +1,67 @@
+<div class="modal-overlay" *ngIf="show" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">{{ item?.name }}</h3>
+      <button (click)="closeModal()" class="modal-close">×</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Variants Selection -->
+      <div class="variants-section" *ngIf="getAvailableVariants().length > 0">
+        <h4 class="section-title">Select Size/Portion</h4>
+        <div class="variants-grid">
+          <mat-card
+            *ngFor="let variant of getAvailableVariants()"
+            [class.selected]="selectedVariant?.id === variant.id"
+            (click)="selectVariant(variant)"
+            class="variant-card"
+          >
+            <div class="variant-content">
+              <h5 class="variant-name">{{ variant.name }}</h5>
+              <p class="variant-price">₹{{ variant.price | number:'1.2-2' }}</p>
+              <span class="default-badge" *ngIf="variant.is_default">Default</span>
+            </div>
+          </mat-card>
+        </div>
+      </div>
+
+      <!-- No Variants - Use Default Price -->
+      <div class="no-variants" *ngIf="getAvailableVariants().length === 0">
+        <p class="price-display">Price: ₹{{ item?.selling_price | number:'1.2-2' }}</p>
+      </div>
+
+      <!-- Quantity Selector -->
+      <div class="quantity-section">
+        <h4 class="section-title">Quantity</h4>
+        <div class="quantity-controls">
+          <button (click)="decreaseQuantity()" class="qty-btn" [disabled]="quantity <= 1">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <input
+            type="number"
+            [(ngModel)]="quantity"
+            min="1"
+            step="1"
+            class="qty-input"
+          />
+          <button (click)="increaseQuantity()" class="qty-btn">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Total Price -->
+      <div class="total-section">
+        <div class="total-row">
+          <span class="total-label">Total:</span>
+          <span class="total-amount">₹{{ getTotalPrice() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button (click)="closeModal()" class="btn-secondary">Cancel</button>
+      <button (click)="addToCart()" class="btn-primary">Add to Cart</button>
+    </div>
+  </div>
+</div>

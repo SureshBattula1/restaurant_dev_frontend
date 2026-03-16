@@ -1,0 +1,390 @@
+<div class="purchase-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Purchase & Supplier Management</h1>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <button
+      *ngFor="let tab of ['orders', 'receivings', 'suppliers']"
+      (click)="switchTab(tab)"
+      [class.active]="activeTab === tab"
+      class="tab-btn"
+    >
+      {{ tab | titlecase }}
+    </button>
+  </div>
+
+  <!-- Purchase Orders Tab -->
+  <div class="content-section" *ngIf="activeTab === 'orders'">
+    <div class="dashboard-cards" *ngIf="dashboardStats">
+      <div class="stat-card"><span class="stat-value">{{ dashboardStats.pending }}</span><span class="stat-label">Pending</span></div>
+      <div class="stat-card"><span class="stat-value">{{ dashboardStats.confirmed }}</span><span class="stat-label">Confirmed</span></div>
+      <div class="stat-card"><span class="stat-value">{{ dashboardStats.received }}</span><span class="stat-label">Received</span></div>
+      <div class="stat-card"><span class="stat-value">₹{{ dashboardStats.total_purchase_cost | number:'1.2-2' }}</span><span class="stat-label">Total Cost</span></div>
+    </div>
+    <div class="section-header">
+      <h2 class="section-title">Purchase Orders</h2>
+      <button (click)="openPOModal()" class="btn-primary">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        New Purchase Order
+      </button>
+    </div>
+
+    <!-- Location Filter for Super Admin -->
+    <div class="location-filter-section mb-4" *ngIf="isSuperAdmin()">
+      <label>Filter by Location:</label>
+      <select [(ngModel)]="selectedLocationId" (change)="loadPurchaseOrders()" class="location-select">
+        <option [ngValue]="undefined">All Locations</option>
+        <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+      </select>
+    </div>
+
+    <app-data-table
+      [config]="purchaseOrdersTableConfig"
+      [data]="purchaseOrdersTableData"
+      [pagination]="purchaseOrdersTablePagination"
+      [loading]="purchaseOrdersTableLoading"
+      [loadDataFn]="loadPurchaseOrdersTableData"
+      [enableRealtime]="true"
+      [realtimeUpdates$]="purchaseOrdersRealtimeUpdates$">
+    </app-data-table>
+  </div>
+
+  <!-- Receivings Tab -->
+  <div class="content-section" *ngIf="activeTab === 'receivings'">
+    <div class="section-header">
+      <h2 class="section-title">Goods Receivings</h2>
+    </div>
+
+    <!-- Location Filter for Super Admin -->
+    <div class="location-filter-section mb-4" *ngIf="isSuperAdmin()">
+      <label>Filter by Location:</label>
+      <select [(ngModel)]="selectedLocationId" (change)="loadReceivings()" class="location-select">
+        <option [ngValue]="undefined">All Locations</option>
+        <option *ngFor="let loc of locations" [ngValue]="loc.id">{{ loc.name }}</option>
+      </select>
+    </div>
+
+    <app-data-table
+      [config]="receivingsTableConfig"
+      [data]="receivingsTableData"
+      [pagination]="receivingsTablePagination"
+      [loading]="receivingsTableLoading"
+      [loadDataFn]="loadReceivingsTableData"
+      [enableRealtime]="true"
+      [realtimeUpdates$]="receivingsRealtimeUpdates$">
+    </app-data-table>
+  </div>
+
+  <!-- Suppliers Tab -->
+  <div class="content-section" *ngIf="activeTab === 'suppliers'">
+    <div class="section-header">
+      <h2 class="section-title">Suppliers</h2>
+      <button (click)="openSupplierModal()" class="btn-primary">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Add Supplier
+      </button>
+    </div>
+
+    <div class="cards-grid">
+      <div *ngFor="let supplier of suppliers" class="supplier-card">
+        <div class="supplier-header">
+          <h3 class="supplier-name">{{ (supplier.person && supplier.person.first_name) || '' }} {{ (supplier.person && supplier.person.last_name) || '' }}</h3>
+          <span class="supplier-code">{{ supplier.supplier_code }}</span>
+        </div>
+        <div class="supplier-body">
+          <p *ngIf="supplier.company_name" class="company-name">{{ supplier.company_name }}</p>
+          <p *ngIf="supplier.person && supplier.person.phone" class="supplier-info">📞 {{ supplier.person.phone }}</p>
+          <p *ngIf="supplier.person && supplier.person.email" class="supplier-info">✉️ {{ supplier.person.email }}</p>
+          <p *ngIf="supplier.balance" class="balance">Balance: ₹{{ supplier.balance | number:'1.2-2' }}</p>
+        </div>
+        <div class="supplier-actions">
+          <button (click)="openSupplierModal(supplier)" class="action-btn edit-btn">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Purchase Order Modal -->
+  <div class="modal-overlay" *ngIf="showPOModal" (click)="closePOModal()">
+    <div class="modal-content large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedPO ? 'View' : 'Create' }} Purchase Order</h3>
+        <button (click)="closePOModal()" class="modal-close">×</button>
+      </div>
+      
+      <!-- Read-only Supplier Submitted Info (view/check only, no edit) -->
+      <div *ngIf="selectedPO && isSupplierSubmittedView()" class="modal-body">
+        <div class="supplier-submitted-section">
+          <h4 class="section-title">Supplier Submitted Info</h4>
+          <div class="supplier-info-grid">
+            <div class="info-row">
+              <span class="info-label">Name:</span>
+              <span class="info-value">{{ getSupplierName(selectedPO) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Phone:</span>
+              <span class="info-value">{{ getSupplierPhone(selectedPO) || '-' }}</span>
+            </div>
+          </div>
+          <div class="items-table-readonly">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-end">Required Qty</th>
+                  <th class="text-end">Supplier Qty</th>
+                  <th class="text-end">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of getSupplierSubmittedItems()">
+                  <td>{{ getItemName(item) }}</td>
+                  <td class="text-end">{{ (item.required_qty ?? item.quantity) | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ item.supplier_qty != null ? (item.supplier_qty | number:'1.2-2') : '-' }}</td>
+                  <td class="text-end">{{ item.price != null ? (item.price | number:'1.2-2') : '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" (click)="closePOModal()" class="btn-secondary">Close</button>
+        </div>
+      </div>
+
+      <!-- Editable form (Create / Edit for CREATED or SENT_TO_SUPPLIER only) -->
+      <form *ngIf="!selectedPO || !isSupplierSubmittedView()" [formGroup]="poForm" (ngSubmit)="savePurchaseOrder()" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group" *ngIf="isSuperAdmin()">
+            <label class="form-label">Location *</label>
+            <select formControlName="location_id" class="form-select">
+              <option value="">Select Location</option>
+              <option *ngFor="let loc of locations" [value]="loc.id">{{ loc.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Supplier *</label>
+            <select formControlName="supplier_id" class="form-select">
+              <option value="">Select Supplier</option>
+              <option *ngFor="let supplier of suppliers" [value]="supplier.id">
+                {{ (supplier.person && supplier.person.first_name) || '' }} {{ (supplier.person && supplier.person.last_name) || '' }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Order Date *</label>
+            <input type="date" formControlName="order_date" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Date</label>
+            <input type="date" formControlName="expected_date" class="form-input" />
+          </div>
+        </div>
+
+        <div class="items-section">
+          <div class="section-title-row">
+            <h4 class="section-title">Items</h4>
+            <button type="button" (click)="addPOItem()" class="btn-small">+ Add Item</button>
+          </div>
+          <div formArrayName="items">
+            <div *ngFor="let item of poItems.controls; let i = index" [formGroupName]="i" class="item-row">
+              <div class="autocomplete-wrapper" style="position: relative; flex: 1;">
+                <input 
+                  type="text" 
+                  [value]="getItemName(item.get('item_id')?.value) || ''"
+                  class="form-input autocomplete-input"
+                  placeholder="Search item..."
+                  (input)="filterItemsForPO($any($event.target).value, i)"
+                  (focus)="filterItemsForPO($any($event.target).value || '', i)"
+                  (blur)="closeAutocompletePO(i)"
+                />
+                <div *ngIf="poItemAutocompleteStates[i]?.showDropdown && poItemAutocompleteStates[i]?.filteredItems && poItemAutocompleteStates[i]!.filteredItems.length > 0" 
+                     class="autocomplete-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <div 
+                    *ngFor="let filteredItem of poItemAutocompleteStates[i]!.filteredItems"
+                    (mousedown)="selectItemForPO(filteredItem.id, i)"
+                    class="autocomplete-item" 
+                    style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; background-color: white;"
+                    (mouseenter)="onAutocompleteItemHover($event)"
+                    (mouseleave)="onAutocompleteItemLeave($event)"
+                  >
+                    <span style="display: block; font-weight: 500;">{{ filteredItem.name }}</span>
+                    <span style="display: block; font-size: 0.85em; color: #666;" *ngIf="filteredItem.sku">SKU: {{ filteredItem.sku }}</span>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" formControlName="item_id" />
+              <input type="number" formControlName="quantity" class="form-input" placeholder="Qty" step="0.01" min="0.01" />
+              <input type="number" formControlName="unit_cost" class="form-input" placeholder="Unit Cost" step="0.01" min="0" />
+              <input type="number" formControlName="tax_rate" class="form-input" placeholder="Tax %" step="0.01" min="0" />
+              <button type="button" (click)="removePOItem(i)" class="btn-remove">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea formControlName="notes" class="form-textarea" rows="3"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closePOModal()" class="btn-secondary">Cancel</button>
+          <button type="button" *ngIf="!selectedPO" (click)="savePurchaseOrder(true)" [disabled]="poForm.invalid" class="btn-primary">Save &amp; Send to Supplier</button>
+          <button type="submit" [disabled]="poForm.invalid" class="btn-primary">{{ selectedPO ? 'Update' : 'Save' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Receiving Modal -->
+  <div class="modal-overlay" *ngIf="showReceivingModal" (click)="closeReceivingModal()">
+    <div class="modal-content large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Receive Goods</h3>
+        <button (click)="closeReceivingModal()" class="modal-close">×</button>
+      </div>
+      
+      <form [formGroup]="receivingForm" (ngSubmit)="saveReceiving()" class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Receiving Date *</label>
+          <input type="date" formControlName="receiving_date" class="form-input" />
+        </div>
+
+        <div class="items-section">
+          <h4 class="section-title">Items to Receive (Supplier Order Data)</h4>
+          <div class="receiving-table-header">
+            <span>Item</span>
+            <span class="text-end">Required Qty</span>
+            <span class="text-end">Supplier Qty</span>
+            <span class="text-end">Qty to Receive</span>
+            <span class="text-end">Price</span>
+            <span>Expiry</span>
+          </div>
+          <div formArrayName="items">
+            <div *ngFor="let item of receivingItems.controls; let i = index" [formGroupName]="i" class="item-row receiving-item-row">
+              <input type="hidden" formControlName="purchase_item_id" />
+              <input type="hidden" formControlName="item_id" />
+              <input type="hidden" formControlName="required_qty" />
+              <input type="hidden" formControlName="supplier_qty" />
+              <span class="item-name">{{ getItemName(getItemIdValue(item)) }}</span>
+              <span class="readonly-cell text-end">{{ item.get('required_qty')?.value | number:'1.2-2' }}</span>
+              <span class="readonly-cell text-end">{{ item.get('supplier_qty')?.value != null ? (item.get('supplier_qty')?.value | number:'1.2-2') : '-' }}</span>
+              <input type="number" formControlName="quantity" class="form-input" placeholder="Qty" step="0.01" min="0" />
+              <input type="number" formControlName="unit_cost" class="form-input" placeholder="Price" step="0.01" min="0" />
+              <input type="date" formControlName="expiry_date" class="form-input" placeholder="Expiry" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea formControlName="notes" class="form-textarea" rows="3"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeReceivingModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="receivingForm.invalid" class="btn-primary">Receive Goods</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Revert Item Modal -->
+  <div class="modal-overlay" *ngIf="showRevertModal" (click)="closeRevertModal()">
+    <div class="modal-content large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Revert Stock (Item-wise or Full)</h3>
+        <button (click)="closeRevertModal()" class="modal-close">×</button>
+      </div>
+      <div class="modal-body" *ngIf="selectedPOForRevert">
+        <p class="mb-3 text-muted">Select items to revert. Stock will be reduced for selected items. Cannot revert once order is received/completed.</p>
+        <div class="revert-table-header">
+          <span></span>
+          <span>Item</span>
+          <span class="text-end">Supplier Qty</span>
+          <span class="text-end">Price</span>
+        </div>
+        <div *ngFor="let item of selectedPOForRevert.items" class="revert-item-row">
+          <input type="checkbox" 
+                 [checked]="isRevertItemSelected(item.id)" 
+                 (change)="toggleRevertItem(item.id)" />
+          <span>{{ getItemName(item) }}</span>
+          <span class="text-end">{{ (item.supplier_qty ?? item.quantity) | number:'1.2-2' }}</span>
+          <span class="text-end">{{ (item.price ?? item.unit_cost) | number:'1.2-2' }}</span>
+        </div>
+        <div class="modal-footer mt-3">
+          <button type="button" (click)="closeRevertModal()" class="btn-secondary">Cancel</button>
+          <button type="button" 
+                  (click)="revertSelectedItems()" 
+                  [disabled]="revertItemSelections.size === 0" 
+                  class="btn-primary">Revert Selected</button>
+          <button type="button" (click)="revertAllItems()" class="btn-secondary">Revert All</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supplier Modal -->
+  <div class="modal-overlay" *ngIf="showSupplierModal" (click)="closeSupplierModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ selectedSupplier ? 'Edit' : 'Add' }} Supplier</h3>
+        <button (click)="closeSupplierModal()" class="modal-close">×</button>
+      </div>
+      
+      <form [formGroup]="supplierForm" (ngSubmit)="saveSupplier()" class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input type="text" formControlName="first_name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            <input type="text" formControlName="last_name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" formControlName="email" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" formControlName="phone" class="form-input input-sm" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp Number</label>
+            <input type="text" formControlName="whatsapp_number" class="form-input input-sm" placeholder="For order link" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input type="text" formControlName="company_name" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tax ID</label>
+            <input type="text" formControlName="tax_id" class="form-input" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Terms</label>
+            <input type="text" formControlName="payment_terms" class="form-input" placeholder="e.g., Net 30" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <textarea formControlName="address" class="form-textarea" rows="2"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="closeSupplierModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" [disabled]="supplierForm.invalid" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,107 @@
+/* Menu Card Theme - Attractive Blue, Yellow & Orange Palette */
+:root {
+  /* Typography */
+  --mc-font-heading: 'Playfair Display', 'Cormorant Garamond', serif;
+  --mc-font-body: 'Poppins', 'Inter', sans-serif;
+
+  /* Blue tones - soft sky / azure */
+  --mc-blue-50: #E8F4FC;
+  --mc-blue-100: #D1E8F8;
+  --mc-blue-200: #A8D4F0;
+  --mc-blue-500: #2563EB;
+  --mc-blue-600: #1D4ED8;
+  --mc-blue-900: #1E3A5F;
+
+  /* Yellow / amber tones - warm sunshine */
+  --mc-yellow-50: #FFFBEB;
+  --mc-yellow-100: #FEF3C7;
+  --mc-yellow-200: #FDE68A;
+  --mc-yellow-400: #FBBF24;
+  --mc-yellow-500: #EAB308;
+  --mc-amber-400: #F59E0B;
+
+  /* Orange / coral tones - vibrant & appetizing */
+  --mc-orange-50: #FFF7ED;
+  --mc-orange-100: #FFEDD5;
+  --mc-orange-200: #FED7AA;
+  --mc-orange-400: #FB923C;
+  --mc-orange-500: #F97316;
+  --mc-orange-600: #EA580C;
+
+  /* Backgrounds - blended blue, yellow, orange */
+  --mc-bg-cream: #FFF9F0;
+  --mc-bg-warm: #FFF5E6;
+  --mc-bg-card: #FFFFFF;
+  --mc-bg-gradient: linear-gradient(165deg, #FFFBF5 0%, #FFF5E8 30%, #FFEFE0 60%, #E8F2FA 100%);
+  --mc-bg-dark: linear-gradient(180deg, #1E3A5F 0%, #2563EB 50%, #1D4ED8 100%);
+
+  /* Section steps - alternating blue / yellow / orange tint */
+  --mc-bg-step-1: #FFFBF5;
+  --mc-bg-step-2: #E8F4FC;
+  --mc-bg-step-3: #FFF7ED;
+  --mc-bg-step-hero: linear-gradient(180deg, #FFFBEB 0%, #FEF3C7 50%, #FFF5E6 100%);
+  --mc-bg-step-menu: #E8F4FC;
+  --mc-bg-step-gallery: #FFF7ED;
+
+  /* Text - dark for contrast on light tints */
+  --mc-charcoal: #1C1917;
+  --mc-charcoal-mid: #2D2A26;
+  --mc-charcoal-light: #4A4540;
+  --mc-text-body: #334155;
+  --mc-text-muted: #64748B;
+
+  /* Accent - orange & gold for CTAs and highlights */
+  --mc-accent-gold: #EAB308;
+  --mc-accent-gold-light: #FBBF24;
+  --mc-accent-gold-bright: #FDE68A;
+  --mc-accent-terracotta: #EA580C;
+  --mc-accent-terracotta-light: #F97316;
+  --mc-accent-terracotta-dark: #C2410C;
+  --mc-accent-olive: #5C6B52;
+  --mc-accent-olive-light: #728064;
+
+  /* CTA - primary orange */
+  --mc-accent-cta: #EA580C;
+  --mc-accent-cta-hover: #C2410C;
+  --mc-accent-cta-active: #9A3412;
+
+  /* Badges */
+  --mc-badge-veg: #059669;
+  --mc-badge-veg-bg: rgba(5, 150, 105, 0.12);
+  --mc-badge-spicy: #EA580C;
+  --mc-badge-spicy-bg: rgba(234, 88, 12, 0.12);
+
+  /* Borders */
+  --mc-border: #E2E8F0;
+  --mc-border-strong: #CBD5E1;
+  --mc-border-subtle: rgba(30, 58, 95, 0.08);
+
+  /* Glassmorphism - warm tint */
+  --mc-glass-bg: rgba(255, 251, 245, 0.85);
+  --mc-glass-bg-scrolled: rgba(255, 247, 237, 0.95);
+  --mc-glass-border: rgba(255, 255, 255, 0.6);
+  --mc-glass-blur: 16px;
+  --mc-glass-shadow: 0 8px 32px rgba(30, 58, 95, 0.08);
+
+  /* Shadows */
+  --mc-shadow-sm: 0 2px 8px rgba(30, 58, 95, 0.06);
+  --mc-shadow-md: 0 6px 24px rgba(30, 58, 95, 0.08);
+  --mc-shadow-lg: 0 12px 40px rgba(30, 58, 95, 0.12);
+  --mc-shadow-card-hover: 0 16px 48px rgba(234, 88, 12, 0.12);
+  --mc-shadow-glow: 0 8px 32px rgba(251, 191, 36, 0.2);
+  --mc-shadow-glow-terracotta: 0 12px 40px rgba(234, 88, 12, 0.25);
+  --mc-focus-ring: 0 0 0 3px rgba(234, 88, 12, 0.35);
+
+  /* Transitions - smooth, cinematic */
+  --mc-ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --mc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mc-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --mc-transition-fast: 0.2s var(--mc-ease-out);
+  --mc-transition: 0.35s var(--mc-ease-out);
+  --mc-transition-slow: 0.5s var(--mc-ease-out);
+
+  /* Breakpoints (for reference) */
+  --mc-mobile: 768px;
+  --mc-tablet: 1024px;
+  --mc-desktop: 1280px;
+}

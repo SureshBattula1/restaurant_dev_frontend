@@ -1,0 +1,12 @@
+<div class="popup-backdrop" (click)="onBackdropClick($event)">
+  <div class="popup-content">
+    <button type="button" class="popup-close" (click)="onClose()" aria-label="Close">×</button>
+    <h3 class="popup-title">Reserve a Table</h3>
+    <p class="popup-desc">Contact us to make a reservation. We look forward to serving you.</p>
+    <div class="popup-contact">
+      <p>Call: +1 234 567 8900</p>
+      <p>Email: reservations&#64;restaurant.com</p>
+    </div>
+    <button type="button" class="popup-done" (click)="onClose()">Close</button>
+  </div>
+</div>

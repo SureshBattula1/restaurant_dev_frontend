@@ -1,0 +1,56 @@
+<div class="supplier-order-container">
+  <div class="card">
+    <h1 class="title">Supplier Order</h1>
+
+    <div *ngIf="loading" class="loading">Loading order...</div>
+    <div *ngIf="error && !loading" class="error">{{ error }}</div>
+    <div *ngIf="success" class="success">Order submitted successfully. Thank you!</div>
+
+    <div *ngIf="order && !loading && !success">
+      <div class="order-info">
+        <p><strong>Order:</strong> {{ order.order_number }}</p>
+        <p><strong>Date:</strong> {{ order.order_date }}</p>
+      </div>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Item Name</th>
+            <th>Item Code</th>
+            <th>Required Qty</th>
+            <th>Supplier Qty</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of order.items">
+            <td>{{ item.item_name }}</td>
+            <td>{{ item.item_code }}</td>
+            <td>{{ item.required_qty }}</td>
+            <td>
+              <input type="number" step="0.01" min="0" class="input-sm"
+                [(ngModel)]="item._supplier_qty"
+                [ngModelOptions]="{standalone: true}"
+                [readonly]="order.status === 'SUPPLIER_SUBMITTED'"
+                placeholder="0">
+            </td>
+            <td>
+              <input type="number" step="0.01" min="0" class="input-sm"
+                [(ngModel)]="item._price"
+                [ngModelOptions]="{standalone: true}"
+                [readonly]="order.status === 'SUPPLIER_SUBMITTED'"
+                placeholder="0">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="actions" *ngIf="order.status !== 'SUPPLIER_SUBMITTED'">
+        <button class="btn-submit" (click)="submit()" [disabled]="!canSubmit() || submitting">
+          {{ submitting ? 'Submitting...' : 'Submit Order' }}
+        </button>
+      </div>
+      <p *ngIf="order.status === 'SUPPLIER_SUBMITTED'" class="already-submitted">Order already submitted.</p>
+    </div>
+  </div>
+</div>

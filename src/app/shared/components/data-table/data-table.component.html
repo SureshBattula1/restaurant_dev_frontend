@@ -1,0 +1,356 @@
+<div class="data-table-container">
+  <!-- Toolbar -->
+  <div class="data-table-toolbar" *ngIf="config.showSearch || config.showExport || config.filters">
+    <!-- Search -->
+    <div class="toolbar-section" *ngIf="config.showSearch">
+      <div class="input-group search-field">
+        <span class="input-group-text">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" 
+               class="form-control form-control-sm" 
+               [formControl]="searchControl" 
+               (input)="onSearchChange($any($event.target).value)" 
+               placeholder="Search...">
+      </div>
+    </div>
+
+    <!-- Date Range -->
+    <div class="toolbar-section date-range-section" *ngIf="hasDateRangeFilter()">
+      <div class="input-group date-field">
+        <span class="input-group-text">From</span>
+        <input type="date" 
+               class="form-control form-control-sm" 
+               [formControl]="dateFromControl" 
+               (change)="onDateRangeChange()">
+      </div>
+      <div class="input-group date-field">
+        <span class="input-group-text">To</span>
+        <input type="date" 
+               class="form-control form-control-sm" 
+               [formControl]="dateToControl" 
+               (change)="onDateRangeChange()">
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="toolbar-section filters-section" *ngIf="config.filters && config.filters.length > 0" [formGroup]="filterForm">
+      <ng-container *ngFor="let filter of config.filters">
+        <!-- Only show non-text, non-dateRange filters (text filters duplicate search functionality) -->
+        <div class="filter-field" *ngIf="filter.type !== 'dateRange' && (filter.type !== 'text' || !config.showSearch)">
+          <select *ngIf="filter.type === 'select' || filter.type === 'multiselect'"
+                  class="form-select form-select-sm"
+                  [formControlName]="filter.key" 
+                  (change)="onFilterChange()">
+            <option [ngValue]="null">All</option>
+            <option *ngFor="let option of filter.options" [ngValue]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+          <input *ngIf="filter.type === 'text' || filter.type === 'number'"
+                 class="form-control form-control-sm"
+                 [formControlName]="filter.key" 
+                 (input)="onFilterChange()" 
+                 [placeholder]="filter.placeholder || filter.label"
+                 [type]="filter.type === 'number' ? 'number' : 'text'">
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- Export Buttons -->
+    <div class="toolbar-section export-section" *ngIf="config.showExport">
+      <div class="btn-group" #exportDropdown>
+        <button type="button" 
+                class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                (click)="toggleExportMenu = !toggleExportMenu"
+                [attr.aria-expanded]="toggleExportMenu"
+                title="Export">
+          <i class="bi bi-download"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" [class.show]="toggleExportMenu" *ngIf="toggleExportMenu">
+          <li><a class="dropdown-item" (click)="exportToCSV(); toggleExportMenu = false" href="javascript:void(0)">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export to CSV
+          </a></li>
+          <li><a class="dropdown-item" (click)="exportToExcel(); toggleExportMenu = false" href="javascript:void(0)">
+            <i class="bi bi-file-earmark-excel me-2"></i>Export to Excel
+          </a></li>
+          <li><a class="dropdown-item" (click)="exportToPDF(); toggleExportMenu = false" href="javascript:void(0)">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Export to PDF
+          </a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Clear Filters -->
+    <div class="toolbar-section" *ngIf="(config.filters && config.filters.length > 0) || config.showSearch || hasDateRangeFilter()">
+      <button type="button" 
+              class="btn btn-sm btn-outline-secondary" 
+              (click)="clearFilters()">
+        <i class="bi bi-x-circle me-1"></i>Clear Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrapper" [class.loading]="loading">
+    <!-- Loader Overlay -->
+    <app-loader *ngIf="loading" size="medium" [overlay]="true" message="Loading data..."></app-loader>
+    
+    <!-- Standard Bootstrap Table -->
+    <div class="table-responsive" *ngIf="!config.expandable || !config.groupBy">
+      <table class="table table-hover data-table">
+        <thead>
+          <tr>
+            <th *ngFor="let column of visibleColumns" 
+                [style.width]="column.width" 
+                [style.text-align]="column.align || 'left'"
+                [class.sortable]="column.sortable"
+                (click)="column.sortable ? onSortChange(column.key) : null"
+                [style.cursor]="column.sortable ? 'pointer' : 'default'">
+              <div class="d-flex align-items-center">
+                <span>{{ column.label }}</span>
+                <i *ngIf="column.sortable" 
+                   [class]="'bi ms-1 ' + getSortIcon(column)"
+                   [class.text-primary]="isColumnSorted(column)"></i>
+              </div>
+            </th>
+            <th *ngIf="config.actions && config.actions.length > 0">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of dataSource">
+            <td *ngFor="let column of visibleColumns" [style.text-align]="column.align || 'left'">
+              <ng-container *ngIf="column.type === 'custom'">
+                <ng-content></ng-content>
+              </ng-container>
+              <ng-container *ngIf="column.type === 'status'">
+                <span [class]="'badge ' + getStatusClass(getColumnValue(row, column))">
+                  {{ formatStatusValue(getColumnValue(row, column)) }}
+                </span>
+              </ng-container>
+              <ng-container *ngIf="column.type !== 'custom' && column.type !== 'status'">
+                {{ getColumnValue(row, column) || '-' }}
+              </ng-container>
+            </td>
+            <td *ngIf="config.actions && config.actions.length > 0">
+              <div class="action-buttons">
+                <ng-container *ngFor="let action of config.actions">
+                  <button *ngIf="!action.condition || action.condition(row)"
+                          type="button"
+                          class="btn btn-sm btn-link p-1" 
+                          [title]="action.tooltip || action.label"
+                          (click)="handleAction(action, row); $event.stopPropagation()">
+                    <i *ngIf="action.icon" class="bi bi-{{ getActionIcon(action) }}"></i>
+                    <span *ngIf="!action.icon">{{ action.label }}</span>
+                  </button>
+                </ng-container>
+              </div>
+            </td>
+          </tr>
+          <!-- Empty State -->
+          <tr *ngIf="!loading && data.length === 0">
+            <td [attr.colspan]="displayedColumns.length + (config.actions && config.actions.length > 0 ? 1 : 0)" class="text-center py-5">
+              <div class="empty-message">
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+                <p class="mt-2 text-muted">{{ config.emptyMessage || 'No data available' }}</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Custom expandable table for grouped data -->
+    <div class="table-responsive" *ngIf="config.expandable && config.groupBy && groupedData.length > 0">
+      <table class="table table-hover data-table expandable-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;" *ngIf="config.expandable"></th>
+            <th *ngFor="let column of visibleColumns" 
+                [style.width]="column.width" 
+                [style.text-align]="column.align || 'left'">
+              {{ column.label }}
+            </th>
+            <th *ngIf="config.actions && config.actions.length > 0">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let row of groupedData">
+            <tr [class.table-active]="(row._isGroup || row._groupItems) && isRowExpanded(row)"
+                [class.group-row]="row._isGroup || row._groupItems"
+                [style.cursor]="(row._isGroup || row._groupItems) ? 'pointer' : 'default'"
+                (click)="(row._isGroup || row._groupItems) ? toggleRow(row) : null">
+              <td *ngIf="config.expandable">
+                <button type="button"
+                        class="btn btn-sm btn-link p-0" 
+                        (click)="toggleRow(row); $event.stopPropagation()" 
+                        *ngIf="row._isGroup || row._groupItems">
+                  <i [class]="'bi ' + (isRowExpanded(row) ? 'bi-chevron-up' : 'bi-chevron-down')"></i>
+                </button>
+              </td>
+              <td *ngFor="let column of visibleColumns" [style.text-align]="column.align || 'left'">
+                <ng-container *ngIf="column.type === 'status'">
+                  <span [class]="'badge ' + getStatusClass(getColumnValue(row, column))">
+                    {{ formatStatusValue(getColumnValue(row, column)) }}
+                  </span>
+                </ng-container>
+                <ng-container *ngIf="column.type !== 'status'">
+                  {{ getColumnValue(row, column) || '-' }}
+                </ng-container>
+              </td>
+              <td *ngIf="config.actions && config.actions.length > 0">
+                <div class="action-buttons" *ngIf="!row._isGroup">
+                  <ng-container *ngFor="let action of config.actions">
+                    <button *ngIf="!action.condition || action.condition(row)"
+                            type="button"
+                            class="btn btn-sm btn-link p-1" 
+                            [title]="action.tooltip || action.label"
+                            (click)="handleAction(action, row); $event.stopPropagation()">
+                      <i *ngIf="action.icon" class="bi bi-{{ getActionIcon(action) }}"></i>
+                      <span *ngIf="!action.icon">{{ action.label }}</span>
+                    </button>
+                  </ng-container>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Expanded Row Detail - Sub Table -->
+            <tr class="expanded-detail-row" *ngIf="(row._isGroup || row._groupItems) && isRowExpanded(row)">
+              <td [attr.colspan]="visibleColumns.length + (config.expandable ? 1 : 0) + (config.actions && config.actions.length > 0 ? 1 : 0)" class="expanded-row-detail">
+                <div class="expanded-content">
+                  <div class="expanded-items-header">
+                    <h5 class="mb-0">
+                      <i class="bi bi-box-seam me-2"></i>
+                      Transaction Items ({{ getGroupItems(row).length }})
+                      <span class="badge bg-primary ms-2" *ngIf="row._isGroup">
+                        {{ row.transaction_type === 'in' ? 'Stock In' : 'Stock Out' }}
+                      </span>
+                    </h5>
+                  </div>
+                  <div class="sub-table-container">
+                    <div class="table-responsive">
+                      <table class="table table-sm expanded-items-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Item Name</th>
+                            <th>SKU</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Unit Cost</th>
+                            <th>Total Value</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let item of getGroupItems(row); let i = index" 
+                              [class.table-secondary]="item.reverted_at"
+                              [class.opacity-50]="item.reverted_at">
+                            <td>{{ i + 1 }}</td>
+                            <td><strong>{{ item.item?.name || '-' }}</strong></td>
+                            <td>{{ item.item?.sku || '-' }}</td>
+                            <td>
+                              <span [class]="'badge ' + getStatusClass(item.transaction_type)">
+                                {{ formatStatusValue(item.transaction_type) }}
+                              </span>
+                            </td>
+                            <td>{{ item.quantity }} {{ item.item?.unit || '' }}</td>
+                            <td>{{ formatCurrency(item.unit_cost) }}</td>
+                            <td><strong>{{ formatTotal(item.quantity, item.unit_cost) }}</strong></td>
+                            <td>
+                              <span class="badge" 
+                                    [class.bg-success]="!item.reverted_at" 
+                                    [class.bg-danger]="item.reverted_at">
+                                {{ item.reverted_at ? 'Reverted' : 'Active' }}
+                              </span>
+                            </td>
+                            <td class="notes-cell">{{ item.notes || '-' }}</td>
+                            <td>
+                              <div class="action-buttons">
+                                <ng-container *ngFor="let action of config.actions">
+                                  <button *ngIf="!action.condition || action.condition(item)"
+                                          type="button"
+                                          class="btn btn-sm btn-link p-1" 
+                                          [title]="action.tooltip || action.label"
+                                          (click)="handleAction(action, item); $event.stopPropagation()">
+                                    <i *ngIf="action.icon" class="bi bi-{{ getActionIcon(action) }}"></i>
+                                    <span *ngIf="!action.icon">{{ action.label }}</span>
+                                  </button>
+                                </ng-container>
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                        <tfoot *ngIf="row._isGroup && getGroupItems(row).length > 1">
+                          <tr class="table-secondary">
+                            <td colspan="4"><strong>Total</strong></td>
+                            <td><strong>{{ row._totalQuantity?.toFixed(2) || '0.00' }}</strong></td>
+                            <td>-</td>
+                            <td><strong>{{ formatCurrency(row._totalValue) }}</strong></td>
+                            <td colspan="3"></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Empty State for expandable table -->
+    <div *ngIf="config.expandable && config.groupBy && !loading && groupedData.length === 0" class="empty-state text-center py-5">
+      <div class="empty-message">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <p class="mt-2 text-muted">{{ config.emptyMessage || 'No data available' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <nav *ngIf="config.showPagination && pagination" aria-label="Table pagination">
+    <ul class="pagination pagination-sm justify-content-end mb-0 px-3 py-2">
+      <li class="page-item" [class.disabled]="currentPage === 1">
+        <a class="page-link" href="javascript:void(0)" (click)="currentPage > 1 && onPageChange(1)">
+          <i class="bi bi-chevron-double-left"></i>
+        </a>
+      </li>
+      <li class="page-item" [class.disabled]="currentPage === 1">
+        <a class="page-link" href="javascript:void(0)" (click)="currentPage > 1 && onPageChange(currentPage - 1)">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      <li class="page-item" *ngFor="let page of getPageNumbers()" [class.active]="page === currentPage">
+        <a class="page-link" href="javascript:void(0)" (click)="onPageChange(page)">{{ page }}</a>
+      </li>
+      <li class="page-item" [class.disabled]="currentPage >= getTotalPages()">
+        <a class="page-link" href="javascript:void(0)" (click)="currentPage < getTotalPages() && onPageChange(currentPage + 1)">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      <li class="page-item" [class.disabled]="currentPage >= getTotalPages()">
+        <a class="page-link" href="javascript:void(0)" (click)="currentPage < getTotalPages() && onPageChange(getTotalPages())">
+          <i class="bi bi-chevron-double-right"></i>
+        </a>
+      </li>
+      <li class="page-item">
+        <select class="form-select form-select-sm ms-2" 
+                [value]="pageSize" 
+                (change)="onPageSizeChange(+$any($event.target).value)"
+                style="width: auto; display: inline-block;">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+        </select>
+      </li>
+      <li class="page-item align-self-center ms-2">
+        <span class="text-muted small">
+          Showing {{ ((currentPage - 1) * pageSize) + 1 }} to {{ Math.min(currentPage * pageSize, pagination.total) }} of {{ pagination.total }}
+        </span>
+      </li>
+    </ul>
+  </nav>
+</div>

@@ -1,0 +1,18 @@
+<article class="simple-card">
+  <div class="simple-img-wrap" *ngIf="item.image_url">
+    <img class="simple-img" [src]="item.image_url" [alt]="item.name" loading="lazy" />
+  </div>
+  <div class="simple-badges" *ngIf="item.popular || item.chef_recommended || item.vegetarian || item.spicy">
+    <span class="simple-badge popular" *ngIf="item.popular">Popular</span>
+    <span class="simple-badge chef" *ngIf="item.chef_recommended">Chef's pick</span>
+    <span class="simple-badge veg" *ngIf="item.vegetarian">V</span>
+    <span class="simple-badge spicy" *ngIf="item.spicy">Spicy</span>
+  </div>
+  <h3 class="simple-title">{{ item.name }}</h3>
+  <div class="simple-underline"></div>
+  <p class="simple-desc" *ngIf="item.description">{{ item.description }}</p>
+  <div class="simple-price-row">
+    <span class="simple-price">₹{{ item.display_price | number:'1.2-2' }}</span>
+    <button type="button" class="simple-order-btn" (click)="onOrder()">Order</button>
+  </div>
+</article>

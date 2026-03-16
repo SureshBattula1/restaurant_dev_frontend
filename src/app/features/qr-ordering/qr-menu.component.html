@@ -1,0 +1,63 @@
+<div class="qr-menu-container">
+  <header class="qr-header">
+    <h1>Restaurant Menu</h1>
+    <div *ngIf="tableNumber" class="table-info">
+      Table: {{ tableNumber }}
+    </div>
+  </header>
+
+  <!-- Categories -->
+  <div class="categories-section">
+    <button
+      *ngFor="let category of categories"
+      (click)="selectCategory(category)"
+      [class.active]="selectedCategory?.id === category.id"
+      class="category-btn"
+    >
+      {{ category.name }}
+    </button>
+    <button
+      (click)="selectCategory(null)"
+      [class.active]="!selectedCategory"
+      class="category-btn"
+    >
+      All
+    </button>
+  </div>
+
+  <!-- Menu Items -->
+  <div class="menu-grid">
+    <div *ngFor="let item of getFilteredItems()" class="menu-item" (click)="addToCart(item)">
+      <div class="item-image">
+        <img [src]="(item.images && item.images[0]?.image_path) || '/assets/no-image.png'" [alt]="item.name">
+      </div>
+      <div class="item-info">
+        <h3>{{ item.name }}</h3>
+        <p class="item-price">₹{{ item.selling_price | number:'1.2-2' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart -->
+  <div class="cart-section" *ngIf="cart.length > 0">
+    <h3>Cart ({{ cart.length }})</h3>
+    <div class="cart-items">
+      <div *ngFor="let item of cart" class="cart-item">
+        <span>{{ item.name }} × {{ item.quantity }}</span>
+        <div class="cart-item-actions">
+          <button (click)="removeFromCart(item)">-</button>
+          <span>₹{{ (item.selling_price * item.quantity) | number:'1.2-2' }}</span>
+          <button (click)="addToCart(item)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="cart-total">
+      <strong>Total: ₹{{ getTotal() | number:'1.2-2' }}</strong>
+    </div>
+    <button (click)="placeOrder()" class="place-order-btn">Place Order</button>
+  </div>
+</div>
+
+
+
+
