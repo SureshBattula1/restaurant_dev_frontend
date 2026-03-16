@@ -80,6 +80,9 @@
   gap: var(--spacing-sm);
   border-bottom: 2px solid var(--color-border-light);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tab-btn {
@@ -95,6 +98,29 @@
   bottom: -2px;
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .header-right {
+    margin-top: var(--spacing-sm);
+  }
+
+  .tabs-container {
+    padding: 0 var(--spacing-md);
+    gap: var(--spacing-xs);
+  }
+
+  .tab-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-xs);
+  }
 }
 
 .tab-btn:hover {
