@@ -24,7 +24,7 @@
         </button>
       </div>
       <!-- Search -->
-      <form [formGroup]="searchForm" class="search-container">
+      <form *ngIf="!showSalesList" [formGroup]="searchForm" class="search-container">
         <div class="search-input-wrapper">
           <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -40,7 +40,7 @@
       </form>
 
       <!-- Categories -->
-      <div class="categories-container">
+      <div class="categories-container" *ngIf="!showSalesList">
         <div *ngIf="loadingCategories" class="categories-loader">
           <app-loader size="small"></app-loader>
         </div>
@@ -161,12 +161,12 @@
         </div>
       </div>
 
-      <div *ngIf="!loadingItems && filteredItems.length === 0" class="empty-state">
+      <div *ngIf="!loadingItems && filteredItems.length === 0 && !showSalesList" class="empty-state">
         <p>No products found</p>
       </div>
 
       <!-- Pagination -->
-      <div class="pagination-container" *ngIf="!loadingItems && totalItems > 0">
+      <div class="pagination-container" *ngIf="!loadingItems && totalItems > 0 && !showSalesList">
         <div class="pagination-info">
           <span>Showing {{ ((currentPage - 1) * perPage) + 1 }} to {{ Math.min(currentPage * perPage, totalItems) }} of {{ totalItems }} items</span>
         </div>
